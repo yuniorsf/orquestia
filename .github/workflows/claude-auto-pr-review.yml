@@ -1,0 +1,40 @@
+name: Claude Auto PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Polyglot SOLID & Guardrail Pre-Flight
+        run: python3 scripts/verify-solid-contracts.py --target . --base "origin/${{ github.base_ref }}"
+
+      - name: Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_federation_rule_id: ${{ secrets.ANTHROPIC_FEDERATION_RULE_ID }}
+          anthropic_organization_id: ${{ secrets.ANTHROPIC_ORGANIZATION_ID }}
+          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
+          plugins: 'code-review@claude-code-plugins'
+          prompt: |
+            /code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+            Additionally, verify compliance with this repository's Tri-Planar Deterministic Oracle, `harness.config.json`, and `CLAUDE.md` contracts:
+            1. Target branch must be `develop` (flag if targeting `main` or `master` unless explicitly marked as a human release PR).
+            2. PR title must be prefixed with `<TICKET-KEY>:` and commit subjects must end with `(<TICKET-KEY>)`.
+            3. Flag any added linter, typechecker, or compiler suppression directives (`eslint-disable`, `@ts-ignore`, `# noqa`, `# type: ignore`, `#[allow(`, `//nolint`, `#pragma warning disable`, `[SuppressMessage]`, `<NoWarn>`, `@SuppressWarnings`).
+            4. Flag any banned direct wall-clock calls (require injected Clock/TimeProvider), blocking sync-over-async calls, missing cancellation propagation, or infrastructure/ORM/HTTP imports leaking into pure domain core directories (`src/core/`, `src/domain/`).

@@ -1,0 +1,1 @@
+# Pure domain core modules live here (zero ORM, DB, HTTP, broker, or UI imports).

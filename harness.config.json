@@ -1,0 +1,125 @@
+{
+  "$schema": "https://antigravity.google/schemas/multi-agent-harness-v1.json",
+  "project": {
+    "name": "MultiAgentProject",
+    "stack": "generic",
+    "ticketPrefix": "PROJ",
+    "integrationBranch": "origin/develop",
+    "mergeTargetBranch": "develop",
+    "protectedBranches": ["main", "master"],
+    "maxConcurrentWorktrees": 5
+  },
+  "architecture": {
+    "domainCoreDirs": ["src/core", "src/domain", "core", "domain"],
+    "testDirs": ["tests", "test", "__tests__", "spec"],
+    "sourceExtensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".go", ".rs", ".cs", ".java", ".kt"],
+    "forbiddenCoreImports": [
+      "sqlalchemy",
+      "psycopg",
+      "psycopg2",
+      "prisma",
+      "typeorm",
+      "drizzle-orm",
+      "axios",
+      "database/sql",
+      "gorm.io",
+      "sqlx",
+      "diesel",
+      "reqwest",
+      "Microsoft.EntityFrameworkCore",
+      "Npgsql",
+      "jakarta.persistence",
+      "org.springframework.web"
+    ],
+    "concreteAdapterInstantiationsInCore": [
+      "\\bnew\\s+(?:HttpClient|PrismaClient|DataSource|Pool|Redis|[A-Z]\\w*DbContext|NpgsqlConnection|SqlConnection)\\s*\\(",
+      "\\b(?:requests\\.(?:get|post|put|delete)|httpx\\.(?:Client|AsyncClient)|psycopg2?\\.connect|sql\\.Open|reqwest::Client::new)\\s*\\("
+    ],
+    "bannedApiPatterns": [
+      {
+        "pattern": "\\b(?:DateTime(?:Offset)?\\.(?:UtcNow|Now|Today))\\b",
+        "extensions": [".cs"],
+        "message": "Direct wall-clock access is banned; inject a Clock / TimeProvider abstraction."
+      },
+      {
+        "pattern": "(\\.GetAwaiter\\s*\\(\\s*\\)\\s*\\.GetResult\\s*\\(|\\bTask\\.Wait(?:All|Any)?\\s*\\(|\\bThread\\.Sleep\\s*\\()",
+        "extensions": [".cs"],
+        "message": "Sync-over-async or thread-blocking call is banned; await asynchronously with cancellation."
+      }
+    ],
+    "suppressionPatterns": [
+      {
+        "pattern": "^\\s*#\\s*pragma\\s+warning\\s+disable\\b",
+        "extensions": [".cs"],
+        "message": "Compiler/analyzer suppression '#pragma warning disable' is prohibited."
+      },
+      {
+        "pattern": "\\[\\s*(?:System\\.Diagnostics\\.CodeAnalysis\\.)?SuppressMessage\\b",
+        "extensions": [".cs"],
+        "message": "Analyzer suppression '[SuppressMessage]' is prohibited."
+      },
+      {
+        "pattern": "<NoWarn>",
+        "extensions": [".csproj", ".props", ".targets"],
+        "message": "MSBuild '<NoWarn>' suppression is prohibited."
+      },
+      {
+        "pattern": "(?:eslint-disable|@ts-ignore|@ts-nocheck)",
+        "extensions": [".ts", ".tsx", ".js", ".jsx"],
+        "message": "Linter/typechecker suppression (eslint-disable / @ts-ignore / @ts-nocheck) is prohibited."
+      },
+      {
+        "pattern": "#\\s*(?:noqa|type:\\s*ignore)\\b",
+        "extensions": [".py"],
+        "message": "Linter/typechecker suppression ('# noqa' / '# type: ignore') is prohibited."
+      },
+      {
+        "pattern": "#\\s*\\[\\s*allow\\s*\\(",
+        "extensions": [".rs"],
+        "message": "Compiler/Clippy suppression '#[allow(...)]' is prohibited."
+      },
+      {
+        "pattern": "//\\s*nolint\\b",
+        "extensions": [".go"],
+        "message": "Linter suppression '//nolint' is prohibited."
+      },
+      {
+        "pattern": "@SuppressWarnings\\b",
+        "extensions": [".java", ".kt"],
+        "message": "Compiler suppression '@SuppressWarnings' is prohibited."
+      }
+    ],
+    "unimplementedStubPatterns": [
+      {
+        "pattern": "\\bthrow\\s+new\\s+NotImplementedException\\s*\\(",
+        "extensions": [".cs"]
+      },
+      {
+        "pattern": "\\braise\\s+NotImplementedError\\b",
+        "extensions": [".py"]
+      },
+      {
+        "pattern": "\\b(?:todo|unimplemented)!\\s*\\(",
+        "extensions": [".rs"]
+      },
+      {
+        "pattern": "\\bpanic\\s*\\(\\s*\"(?i:not implemented|todo)\"",
+        "extensions": [".go"]
+      },
+      {
+        "pattern": "\\bthrow\\s+new\\s+Error\\s*\\(\\s*['\"](?i:not implemented|todo)",
+        "extensions": [".ts", ".tsx", ".js", ".jsx"]
+      },
+      {
+        "pattern": "\\bthrow\\s+new\\s+UnsupportedOperationException\\s*\\(\\s*\"(?i:not implemented|todo)",
+        "extensions": [".java", ".kt"]
+      }
+    ],
+    "pairedFileRules": [],
+    "metrics": {
+      "maxInterfaceMethods": 5,
+      "maxPublicMethods": 10,
+      "maxLoc": 500
+    }
+  }
+}

@@ -1,0 +1,54 @@
+# OS & Editor metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.vscode/
+.idea/
+.vs/
+*.swp
+*.swo
+
+# Multi-Agent local runtime sandboxes & per-developer overrides
+.claude/settings.local.json
+.claude/worktrees/
+.agents/teamwork/
+
+# Secrets & environment variables
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Node / TypeScript
+node_modules/
+.next/
+.nuxt/
+.turbo/
+coverage/
+
+# Go / Rust / JVM / .NET
+bin/
+obj/
+out/
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.coverprofile
+TestResults/
+*.coverage
+*.log
