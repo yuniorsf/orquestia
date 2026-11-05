@@ -1,0 +1,15 @@
+dist
+coverage
+node_modules
+package-lock.json
+
+# Repository governance & agent-harness docs/configs predate the TS/JS
+# workspace and are not part of what Prettier formats here.
+*.md
+.claude/
+.agents/
+.antigravity/
+.github/
+.harness/
+BannedSymbols.txt
+Directory.Build.props
