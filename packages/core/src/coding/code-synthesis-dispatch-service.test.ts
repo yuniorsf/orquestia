@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { WorktreeHandle } from '../queue/types.js';
+import type { WorktreeHandle } from '../workspace/types.js';
 import { CodeSynthesisDispatchService } from './code-synthesis-dispatch-service.js';
 import { FakeCodeSynthesisDispatcherPort } from './test-builders.js';
 import type { CodingTaskManifest } from './types.js';

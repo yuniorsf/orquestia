@@ -1,8 +1,6 @@
 import type { FileManifestEntry, SpecialistBranch } from '../planning/types.js';
-import type { WorktreeHandle } from '../queue/types.js';
+import type { WorktreeHandle } from '../workspace/types.js';
 import type {
-  CheckpointHandle,
-  CheckpointPort,
   CodeSynthesisDispatcherPort,
   CodeSynthesisOutput,
   CodingRemediationDispatcherPort,
@@ -54,23 +52,6 @@ export class FakeCommandRunnerPort implements CommandRunnerPort {
 
   setResult(command: string, result: CommandResult): void {
     this.resultsByCommand[command] = result;
-  }
-}
-
-export class FakeCheckpointPort implements CheckpointPort {
-  private sequence = 0;
-  readonly createdHandles: CheckpointHandle[] = [];
-  readonly rolledBackHandles: CheckpointHandle[] = [];
-
-  async create(): Promise<CheckpointHandle> {
-    this.sequence += 1;
-    const handle = { id: `checkpoint-${this.sequence}` };
-    this.createdHandles.push(handle);
-    return handle;
-  }
-
-  async rollback(handle: CheckpointHandle): Promise<void> {
-    this.rolledBackHandles.push(handle);
   }
 }
 
