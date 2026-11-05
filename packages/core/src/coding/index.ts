@@ -6,3 +6,5 @@ export { CodingOracleRunner } from './coding-oracle-runner.js';
 export { CodingSelfHealingService } from './coding-self-healing-service.js';
 export { ShellCommandRunner } from './shell-command-runner.js';
 export { GitStashCheckpoint } from './git-stash-checkpoint.js';
+export { RebaseAndReverifyService } from './rebase-and-reverify-service.js';
+export { ShipService } from './ship-service.js';
