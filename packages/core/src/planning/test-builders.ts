@@ -1,10 +1,14 @@
 import type {
   BaselineGitStatus,
   ConfigReaderPort,
+  FileExistencePort,
   GitStatusPort,
   IssueDetails,
   IssueTrackerPort,
   OrquestiaConfig,
+  SpecialistBranch,
+  SpecialistDispatcherPort,
+  SpecialistOutput,
 } from './types.js';
 
 export class FakeGitStatusPort implements GitStatusPort {
@@ -49,3 +53,22 @@ export const sampleConfig: OrquestiaConfig = {
   projectName: 'Orquestia',
   raw: { version: '3.2', project_name: 'Orquestia' },
 };
+
+export class FakeSpecialistDispatcherPort implements SpecialistDispatcherPort {
+  readonly dispatchedBranches: SpecialistBranch[] = [];
+
+  constructor(private readonly outputs: Readonly<Record<SpecialistBranch, SpecialistOutput>>) {}
+
+  async dispatch(branch: SpecialistBranch): Promise<SpecialistOutput> {
+    this.dispatchedBranches.push(branch);
+    return this.outputs[branch];
+  }
+}
+
+export class InMemoryFileExistencePort implements FileExistencePort {
+  constructor(private readonly existingPaths: ReadonlySet<string>) {}
+
+  async exists(path: string): Promise<boolean> {
+    return this.existingPaths.has(path);
+  }
+}
