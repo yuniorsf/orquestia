@@ -29,6 +29,8 @@ jobs:
           anthropic_federation_rule_id: ${{ secrets.ANTHROPIC_FEDERATION_RULE_ID }}
           anthropic_organization_id: ${{ secrets.ANTHROPIC_ORGANIZATION_ID }}
           anthropic_workspace_id: ${{ secrets.ANTHROPIC_WORKSPACE_ID }}
+          # TEMPORARY debugging aid — verifying service account workspace membership fix. Private repo only.
+          show_full_output: true
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: |
