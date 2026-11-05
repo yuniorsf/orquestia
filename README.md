@@ -99,3 +99,5 @@ Full operational reference: [`AI-AUGMENTED-DEVELOPMENT.md`](AI-AUGMENTED-DEVELOP
 python3 scripts/verify-solid-contracts.py --target .
 ./scripts/verify-agent-worktree.sh .
 ```
+
+<!-- ci verification probe 2: safe to ignore/close -->
