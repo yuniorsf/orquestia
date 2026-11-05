@@ -1,0 +1,16 @@
+{
+  "name": "@orquestia/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "orquestia": "dist/index.js"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@orquestia/core": "^0.1.0"
+  }
+}
