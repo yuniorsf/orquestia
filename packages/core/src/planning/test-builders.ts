@@ -1,11 +1,16 @@
 import type {
   BaselineGitStatus,
   ConfigReaderPort,
+  ConfluencePublisherPort,
   FileExistencePort,
+  GateFinding,
   GitStatusPort,
   IssueDetails,
   IssueTrackerPort,
+  JiraStatusSyncPort,
   OrquestiaConfig,
+  PlanSpecWriterPort,
+  RemediationDispatcherPort,
   SpecialistBranch,
   SpecialistDispatcherPort,
   SpecialistOutput,
@@ -70,5 +75,49 @@ export class InMemoryFileExistencePort implements FileExistencePort {
 
   async exists(path: string): Promise<boolean> {
     return this.existingPaths.has(path);
+  }
+}
+
+export class FakeRemediationDispatcherPort implements RemediationDispatcherPort {
+  readonly calls: Array<{ branch: SpecialistBranch; findings: readonly GateFinding[] }> = [];
+
+  constructor(
+    private readonly resolve: (
+      branch: SpecialistBranch,
+      findings: readonly GateFinding[],
+    ) => SpecialistOutput,
+  ) {}
+
+  async remediate(
+    branch: SpecialistBranch,
+    findings: readonly GateFinding[],
+  ): Promise<SpecialistOutput> {
+    this.calls.push({ branch, findings });
+    return this.resolve(branch, findings);
+  }
+}
+
+export class FakePlanSpecWriterPort implements PlanSpecWriterPort {
+  readonly writes: Array<{ taskId: string; markdown: string }> = [];
+
+  async writeSpec(taskId: string, markdown: string): Promise<string> {
+    this.writes.push({ taskId, markdown });
+    return `/fake/specs/plan-${taskId}.md`;
+  }
+}
+
+export class FakeConfluencePublisherPort implements ConfluencePublisherPort {
+  readonly publishedPages: Array<{ title: string; markdown: string }> = [];
+
+  async publishPage(title: string, markdown: string): Promise<void> {
+    this.publishedPages.push({ title, markdown });
+  }
+}
+
+export class FakeJiraStatusSyncPort implements JiraStatusSyncPort {
+  readonly transitions: Array<{ issueKey: string; statusName: string }> = [];
+
+  async transitionIssue(issueKey: string, statusName: string): Promise<void> {
+    this.transitions.push({ issueKey, statusName });
   }
 }
