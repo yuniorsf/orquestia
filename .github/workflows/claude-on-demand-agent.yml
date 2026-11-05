@@ -39,8 +39,5 @@ jobs:
         with:
           anthropic_federation_rule_id: ${{ secrets.ANTHROPIC_FEDERATION_RULE_ID }}
           anthropic_organization_id: ${{ secrets.ANTHROPIC_ORGANIZATION_ID }}
-          # TEMPORARY debugging aid while diagnosing federation auth failures.
-          # Safe only because this is a private repo — remove once resolved.
-          show_full_output: true
           additional_permissions: |
             actions: read
