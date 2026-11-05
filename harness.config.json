@@ -1,7 +1,7 @@
 {
   "$schema": "https://antigravity.google/schemas/multi-agent-harness-v1.json",
   "project": {
-    "name": "MultiAgentProject",
+    "name": "<app>",
     "stack": "generic",
     "ticketPrefix": "PROJ",
     "integrationBranch": "origin/develop",

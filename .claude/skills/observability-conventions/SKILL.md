@@ -23,3 +23,4 @@ Distilled, lazy-loaded OpenTelemetry and SRE observability directives applicable
 | [semantic-vendor-agnostic-instrumentation.md](references/semantic-vendor-agnostic-instrumentation.md) | OpenTelemetry API + OTLP wire protocol over proprietary vendor SDKs in application code | `current` |
 | [slo-based-alerting.md](references/slo-based-alerting.md) | Four golden signals, customer-symptom SLOs, and Error Budget Burn-Rate alerting | `current` |
 | [tail-based-sampling.md](references/tail-based-sampling.md) | Collector-buffered tail sampling retaining 100% of errors and P95+ latency plus a representative baseline | `current` |
+| [activitysource-native-otel-and-log-correlation.md](references/activitysource-native-otel-and-log-correlation.md) | Native `ActivitySource`/`Activity` ↔ OTel concept mapping, zero-cost-when-unsampled pattern, and log correlation | `current` |

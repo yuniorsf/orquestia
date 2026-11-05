@@ -26,7 +26,7 @@ if [[ -f "${HARNESS_ENV}" ]]; then
     source "${HARNESS_ENV}"
 fi
 
-PROJECT_NAME="${PROJECT_NAME:-MultiAgentProject}"
+PROJECT_NAME="${PROJECT_NAME:-<app>}"
 DEFAULT_BASE_REF="${INTEGRATION_BRANCH:-origin/develop}"
 MERGE_TARGET="${MERGE_TARGET_BRANCH:-develop}"
 read -r -a PROTECTED_ARRAY <<< "${PROTECTED_BRANCHES:-main master}"
