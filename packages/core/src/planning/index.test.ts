@@ -17,4 +17,15 @@ describe('planning public API', () => {
     expect(planning.PlanOracleEvaluator).toBeTypeOf('function');
     expect(planning.FsFileExistencePort).toBeTypeOf('function');
   });
+
+  it('exports the self-healing and synthesis services, and the spec writer adapter', () => {
+    expect(planning.PlanningSelfHealingService).toBeTypeOf('function');
+    expect(planning.PlanSynthesisService).toBeTypeOf('function');
+    expect(planning.FsPlanSpecWriter).toBeTypeOf('function');
+  });
+
+  it('exports the self-healing and synthesis domain error types', () => {
+    expect(planning.InvalidSelfHealConfigError).toBeTypeOf('function');
+    expect(planning.UnverifiedPlanError).toBeTypeOf('function');
+  });
 });

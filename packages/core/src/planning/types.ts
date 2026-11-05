@@ -92,3 +92,58 @@ export interface PlanOracleInput {
   readonly domainCoreDirs: readonly string[];
   readonly forbiddenCoreImports: readonly string[];
 }
+
+export interface RemediationDispatcherPort {
+  remediate(branch: SpecialistBranch, findings: readonly GateFinding[]): Promise<SpecialistOutput>;
+}
+
+export interface SelfHealConfig {
+  readonly maxRetries: number;
+}
+
+export interface SelfHealAttempt {
+  readonly attempt: number;
+  readonly result: PlanOracleResult;
+}
+
+export type SelfHealOutcomeStatus = 'passed' | 'aborted' | 'exhausted';
+
+export interface SelfHealOutcome {
+  readonly status: SelfHealOutcomeStatus;
+  readonly finalResult: PlanOracleResult;
+  readonly attempts: readonly SelfHealAttempt[];
+}
+
+export class InvalidSelfHealConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidSelfHealConfigError';
+  }
+}
+
+export interface PlanSpecWriterPort {
+  writeSpec(taskId: string, markdown: string): Promise<string>;
+}
+
+export interface ConfluencePublisherPort {
+  publishPage(title: string, markdown: string): Promise<void>;
+}
+
+export interface JiraStatusSyncPort {
+  transitionIssue(issueKey: string, statusName: string): Promise<void>;
+}
+
+export interface PlanSynthesisInput {
+  readonly taskId: string;
+  readonly issueKey: string | null;
+  readonly oracleResult: PlanOracleResult;
+  readonly branchA: SpecialistOutput;
+  readonly branchB: SpecialistOutput;
+}
+
+export class UnverifiedPlanError extends Error {
+  constructor(taskId: string) {
+    super(`Cannot synthesize plan "${taskId}": the Deterministic Plan Oracle has not passed.`);
+    this.name = 'UnverifiedPlanError';
+  }
+}

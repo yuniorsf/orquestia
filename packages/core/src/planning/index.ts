@@ -5,3 +5,6 @@ export { YamlConfigReader } from './yaml-config-reader.js';
 export { PlanDispatchService, type PlanDispatchResult } from './plan-dispatch-service.js';
 export { PlanOracleEvaluator } from './plan-oracle-evaluator.js';
 export { FsFileExistencePort } from './fs-file-existence-port.js';
+export { PlanningSelfHealingService } from './planning-self-healing-service.js';
+export { PlanSynthesisService } from './plan-synthesis-service.js';
+export { FsPlanSpecWriter } from './fs-plan-spec-writer.js';
