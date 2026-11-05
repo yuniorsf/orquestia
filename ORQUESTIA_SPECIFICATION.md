@@ -1,6 +1,6 @@
 # Orquestia: Technical Specification & Architecture Design Document
 
-**Document Version**: 3.0.0  
+**Document Version**: 3.2.0  
 **Status**: APPROVED / ARCHITECTURE BASELINE  
 **Classification**: Technical Design Specification  
 **Language**: English  
@@ -11,24 +11,27 @@
 ## 1. Executive Summary & Vision
 
 ### 1.1 Context & Problem Statement
-Modern software engineering organizations and individual developers routinely subscribe to multiple consumer-tier artificial intelligence services (e.g., Claude Pro, ChatGPT Plus, GitHub Copilot Pro, and Google Antigravity). However, these platforms remain fragmented. Because consumer subscriptions impose browser-first rate-limiting policies and anti-scraping Terms of Service (ToS), developers cannot easily integrate them into programmatic, end-to-end backend automation pipelines without purchasing parallel Pay-As-You-Go API keys.
+Modern software engineering organizations and individual developers routinely subscribe to multiple consumer-tier artificial intelligence services (e.g., Claude Pro, ChatGPT Plus, GitHub Copilot Pro, and Google Antigravity) alongside self-hosted open-weight model instances (e.g., DeepSeek, Qwen 2.5-Coder, Codestral, Llama 3.3). However, these platforms remain fragmented. Because consumer subscriptions impose browser-first rate-limiting policies and anti-scraping Terms of Service (ToS), developers cannot easily integrate them into programmatic, end-to-end backend automation pipelines without purchasing parallel Pay-As-You-Go API keys.
 
-As a result, engineers spend substantial cognitive effort manually copying prompts, context, architectural designs, code snippets, and verification errors across disparate browser tabs and local IDE sessions.
+Furthermore, single-model bottlenecks create severe failure modes:
+1. Hourly rate limits (HTTP 429 / quota exhaustion) halt entire automation pipelines.
+2. Inefficient model assignment routes simple lint repairs to costly frontier reasoning models while starving complex domain architectures of deep-thinking tokens.
+3. Lack of air-gapped support prevents privacy-critical enterprise codebases from using local open-weight inference hardware.
 
 ### 1.2 The Orquestia Solution
-**Orquestia** is an open-source, multi-agent development lifecycle orchestrator and Application Lifecycle Management (ALM) bridge. It acts as an **Outer-Loop Orchestration Controller** that binds disparate agent subscriptions through a non-invasive **Local Session Bridge** model. 
+**Orquestia** is an open-source, multi-agent development lifecycle orchestrator and Application Lifecycle Management (ALM) bridge. It acts as an **Outer-Loop Orchestration Controller** that binds disparate agent subscriptions and open-weight models through a non-invasive **Local Session Bridge** and **OpenAI-Compatible Gateway** model.
 
 Orquestia drives tasks across two primary macro-workflows governed by deterministic Directed Acyclic Graphs (DAGs):
 1. **Planning DAG (`/orquestia-plan-dag`)**: A strictly read-only, 5-phase exploratory and architecture synthesis protocol.
 2. **Coding DAG (`/orquestia-code-dag`)**: An isolated, 5-phase implementation and self-healing protocol executed inside dedicated Git Worktrees.
 
-Both workflows interact directly with enterprise ALM infrastructure (**Atlassian Jira & Confluence**) and secure multi-tier credential storage (**SQLCipher & HashiCorp Vault**).
+Both workflows interact directly with enterprise ALM infrastructure (**Atlassian Jira & Confluence**), secure multi-tier credential storage (**SQLCipher & HashiCorp Vault**), and a dynamic **Layer-by-Layer Load Balancer** with optional toggleability (`enabled: true/false`).
 
 ---
 
 ## 2. High-Level Architecture Overview
 
-Orquestia is structured around a decoupled, layered micro-kernel architecture with event-driven state propagation and deterministic oracle gates.
+Orquestia is structured around a decoupled, layered micro-kernel architecture with event-driven state propagation, layer load balancing, and deterministic oracle gates.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
@@ -55,16 +58,16 @@ Orquestia is structured around a decoupled, layered micro-kernel architecture wi
 └─────────────┬──────────────────────────┬─────────────────────────────┬───────────────────┘
               │                          │                             │
 ┌─────────────▼────────────┐ ┌───────────▼───────────┐ ┌───────────────▼───────────────────┐
-│      Agent Adapters      │ │   Workspace Engine    │ │      Security Vault Layer         │
-│  (Smart Fallback Router) │ │                       │ │         (IVaultProvider)          │
+│   Layer Load Balancer    │ │   Workspace Engine    │ │      Security Vault Layer         │
+│  (Configurable Pools)    │ │                       │ │         (IVaultProvider)          │
 │                          │ │ ├── AST / Tree-sitter │ │                                   │
-│ ├── Antigravity Bridge   │ │ │   (Repo-Map Engine) │ │ ├── SQLCipher Provider (Local)    │
-│ ├── Claude Code (2A)     │ │ ├── Git Worktree Pool │ │ │   (AES-256 + OS Keyring)        │
-│ ├── Copilot CLI (2B)     │ │ │   (Isolated Sandbox)│ │ └── HashiCorp Provider (Corp)     │
-│ ├── Fallback LLM (GPT-4o)│ │ ├── Checkpoint Engine │ │     (Enterprise Vault KV v2)      │
-│ └── Rate Limit Tracker   │ │ └── Atlassian Client  │ └───────────────────────────────────┘
-└──────────────────────────┘ │     (Jira/Confluence) │
-                             └───────────────────────┘
+│ ├── Strategy Router      │ │ │   (Repo-Map Engine) │ │ ├── SQLCipher Provider (Local)    │
+│ │   (Round-Robin/Quota/  │ │ ├── Git Worktree Pool │ │ │   (AES-256 + OS Keyring)        │
+│ │    Least-Cost/Latency) │ │ │   (Isolated Sandbox)│ │ └── HashiCorp Provider (Corp)     │
+│ ├── Frontier Subscriptions│ │ ├── Checkpoint Engine │ │     (Enterprise Vault KV v2)      │
+│ ├── Global / Chinese LLMs│ │ └── Atlassian Client  │ └───────────────────────────────────┘
+│ └── Local / Ollama Nodes │ │     (Jira/Confluence) │
+└──────────────────────────┘ └───────────────────────┘
 ```
 
 ---
@@ -84,8 +87,8 @@ The Planning DAG enforces an exploratory, zero-mutation protocol that synthesize
          │
          ▼
 [Phase 2: Parallel Specialist Dispatch (Read-Only)]
-  ├─► Branch 2A (Architecture & Domain): Claude Code / Antigravity (`coreLogicSpec`)
-  └─► Branch 2B (Contracts & QA Matrix): Copilot CLI / Assistant (`contractsAndTestsSpec`)
+  ├─► Branch 2A (Architecture & Domain): Claude 3.5 / DeepSeek-R1 / o3-mini (`coreLogicSpec`)
+  └─► Branch 2B (Contracts & QA Matrix): Copilot / Codestral / Qwen 2.5-Coder (`contractsAndTestsSpec`)
          │
          ▼
 [Join Barrier: Await 2A and 2B Structured Outputs]
@@ -150,7 +153,63 @@ The Coding DAG consumes a verified plan or Jira key, creates an isolated physica
 
 ---
 
-## 4. Multi-Tier Security & Secret Storage Architecture
+## 4. Layer-by-Layer Model Load Balancing & Model Diversity
+
+### 4.1 Architecture & Balancing Policies
+Orquestia introduces a dedicated **`LayerLoadBalancer`** that sits between DAG phase execution and model providers. It allows independent model pools per stage with dynamic activation (`enabled: true/false`).
+
+```
+                  ┌───────────────────────────────────────────────┐
+                  │             DAG Phase / Runner                │
+                  │   (e.g., Phase 2A: Architecture & Domain)     │
+                  └───────────────────────┬───────────────────────┘
+                                          │
+                                          ▼
+                  ┌───────────────────────────────────────────────┐
+                  │          LayerLoadBalancer (Phase 2A)         │
+                  │  - Enabled: true / false (direct passthrough) │
+                  │  - Strategy Router: round_robin / quota_aware │
+                  │                     least_cost / latency      │
+                  │  - Health Check / Rate-Limit Monitor          │
+                  └───────────────┬───────────────┬───────────────┘
+                                  │               │
+                     Active Pool: │               │
+                                  ▼               ▼
+                       ┌────────────────┐ ┌────────────────┐
+                       │ Claude 3.5     │ │ DeepSeek-R1    │
+                       │ (Subscription) │ │ (API / vLLM)   │
+                       └────────────────┘ └────────────────┘
+```
+
+#### Balancing Strategies:
+1. **`quota_aware` (Smart Weighted)**: Checks `vault.db` for rate-limit cooldown timestamps (`rate_limit_reset_at`) and dynamically shifts traffic away from models nearing quota exhaustion.
+2. **`least_cost`**: Prioritizes local/free inference endpoints (Ollama/vLLM) first, spilling over to commercial APIs only when local queues or hardware saturate.
+3. **`latency_priority`**: Favors ultra-high-speed inference accelerators (e.g., Groq LPU, Cerebras, fast local 7B models) for rapid compile-fix iterations.
+4. **`round_robin`**: Uniformly distributes requests across identical or peer-tier accounts to multiply rate limits.
+
+### 4.2 Expanded Model Support Matrix
+
+| Category | Representative Models | Ideal Orquestia Role | Primary Advantage |
+| :--- | :--- | :--- | :--- |
+| **Frontier Reasoning** | Claude 3.5 Sonnet, OpenAI o1/o3-mini | Planning (2A), Core Domain (2A) | Highest architectural precision and SOLID compliance |
+| **Chinese Frontier & Open Weights** | DeepSeek-R1, DeepSeek-V3, Qwen 2.5-Coder (32B/7B), GLM-4-Plus, Kimi K2 | Architecture (2A), Scaffolding (2B), Fallbacks | 1/10th cost, Apache 2.0 open weights, top coding benchmarks |
+| **European Open Weights** | Mistral Codestral (22B), Mistral Large 2 | Scaffolding & Tests (2B), Code Review (Phase 3) | Native Fill-In-The-Middle (FIM) across 80+ languages |
+| **Open Source / Enterprise Air-Gapped** | Meta Llama 3.3 (70B), Microsoft Phi-4 (14B), CodeGemma | Local Sandbox, Self-Healing Retries (Phase 4) | Fully local, zero data egress, runs on local GPUs |
+| **High-Throughput Inference Engines** | Groq, Cerebras, vLLM, Ollama | Phase 4 Self-Healing Loops | Sub-second inference (300–800 tps) for fast convergence |
+
+### 4.3 Hardware Sizing Matrix for Local LLM Deployments
+
+| Model Size Tier | Representative Models | Min VRAM (4-bit Q4) | Recommended PC GPU | Apple Silicon Unified RAM | Target Orquestia Role |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **7B – 9B** | `Qwen2.5-Coder-7B`, `Gemma-2-9B` | **6 – 8 GB** | RTX 3060 / 4060 Ti | **16 GB** | Phase 4 Formatting & Lint Fixes |
+| **14B – 22B** | `Phi-4 (14B)`, `Codestral (22B)` | **12 – 16 GB** | RTX 4070 Ti / 4080 | **24 – 32 GB** | Contract & Scaffolding (2B) |
+| **32B (Sweet Spot)**| `Qwen2.5-Coder-32B` | **20 – 24 GB** | **1× RTX 3090 / 4090** | **36 – 48 GB** (Pro/Max) | **Full Domain Coding (2A & 2B)** |
+| **70B – 72B** | `Llama 3.3 70B`, `Qwen2.5 72B` | **40 – 48 GB** | **2× RTX 3090 / 4090** | **64 – 96 GB** (Max/Ultra) | Planning (2A) & Deep Review |
+| **Large MoE** | `DeepSeek-R1` (Full 671B) | **~400 GB** | 8× A100 / H100 (80GB) | 512 GB+ Cluster | Enterprise Datacenter Reasoning |
+
+---
+
+## 5. Multi-Tier Security & Secret Storage Architecture
 
 Orquestia decouples secret storage through the `IVaultProvider` abstraction. The engine dynamically chooses between a native local embedded vault and a remote enterprise vault.
 
@@ -172,7 +231,7 @@ Orquestia decouples secret storage through the `IVaultProvider` abstraction. The
                    (macOS Keychain / Windows Credential)
 ```
 
-### 4.1 SQLCipher Database Schema (`~/.orquestia/vault.db`)
+### 5.1 SQLCipher Database Schema (`~/.orquestia/vault.db`)
 ```sql
 CREATE TABLE subscriptions (
     id TEXT PRIMARY KEY,
@@ -204,7 +263,7 @@ CREATE TABLE agent_access_audit (
 );
 ```
 
-### 4.2 Atlassian OAuth 2.0 (3LO) with PKCE
+### 5.2 Atlassian OAuth 2.0 (3LO) with PKCE
 Rather than persisting insecure long-lived static API tokens, Orquestia implements an automated loopback server OAuth 2.0 flow:
 1. Spawns an ephemeral HTTP listener at `http://localhost:8085/callback`.
 2. Generates cryptographic PKCE `code_verifier` and `code_challenge` (S256).
@@ -215,31 +274,31 @@ Rather than persisting insecure long-lived static API tokens, Orquestia implemen
 
 ---
 
-## 5. Advanced Resilience & Context Management
+## 6. Advanced Resilience & Context Management
 
-### 5.1 Token-Aware Context Condenser (AST Repo-Map)
+### 6.1 Token-Aware Context Condenser (AST Repo-Map)
 To minimize token consumption and avoid context window saturation on consumer LLMs, Orquestia integrates a Tree-sitter-based abstract syntax tree analyzer:
 - Strips function implementations, internal private variables, and comments from peripheral codebase files.
 - Extracts an **ISP Minimal Context Projection ($\pi_k$)** consisting strictly of exported interfaces, abstract signatures, data transfer models, and port definitions.
 
-### 5.2 Smart Fallback Routing & Rate-Limit Tracking
+### 6.2 Smart Fallback Routing & Rate-Limit Tracking
 When a primary agent subscription encounters a rate limit (HTTP 429 or CLI quota exhaustion):
 - The `RateLimitTracker` flags the subscription and calculates `rate_limit_reset_at`.
-- The `SmartFallbackRouter` automatically redirects subsequent task steps to an auxiliary provider (e.g., fallback from Claude Code to GPT-4o).
+- The `SmartFallbackRouter` automatically redirects subsequent task steps to an auxiliary provider (e.g., fallback from Claude Code to DeepSeek-R1 or local Qwen).
 - Upon expiration of the cooldown period, traffic automatically falls back to the primary subscription.
 
-### 5.3 Bounded Self-Healing with Dual Rollback ($f^{op}$)
+### 6.3 Bounded Self-Healing with Dual Rollback ($f^{op}$)
 Iterative code repair can compound regressions. Orquestia implements transactional checkpoints:
 - Before each self-healing attempt in Phase 4, a Git stash checkpoint is committed: `git stash create`.
 - If a repair attempt introduces additional compiler diagnostics or test failures, Orquestia triggers an immediate rollback ($f^{op}$) to the checkpoint before attempting an alternate reasoning strategy.
 
-### 5.4 Durable Human-in-the-Loop Approvals
+### 6.4 Durable Human-in-the-Loop Approvals
 Configurable approval gates freeze pipeline execution in non-volatile storage (`.orquestia/state.json`):
 - Pushes, rebases, and pull request shipments can be gated to require explicit developer sign-off in the terminal or VS Code notification panel.
 
 ---
 
-## 6. Monorepo Structure & Directory Organization
+## 7. Monorepo Structure & Directory Organization
 
 ```text
 orquestia-monorepo/
@@ -253,6 +312,7 @@ orquestia-monorepo/
 │   │   ├── src/
 │   │   │   ├── dag/                   # DAG Runners (Planning & Coding)
 │   │   │   ├── oracles/               # Deterministic Validation Gates
+│   │   │   ├── load_balancer/         # LayerLoadBalancer & Scheduling Strategies
 │   │   │   ├── approvals/             # Durable Human-in-the-loop Gates
 │   │   │   ├── queue/                 # Worktree Pool & Concurrent Task Queue
 │   │   │   ├── security/              # IVaultProvider, SQLCipher, HashiCorp
@@ -281,13 +341,15 @@ orquestia-monorepo/
 
 ---
 
-## 7. Configuration Specification (`orquestia.config.yaml`)
+## 8. Master Configuration Specification (`orquestia.config.yaml`)
 
 ```yaml
-version: "3.0"
+version: "3.2"
 project_name: "fintech-payment-gateway"
 
+# ==============================================================================
 # 1. SECRET MANAGEMENT (SQLCipher vs HashiCorp)
+# ==============================================================================
 vault:
   provider: "sqlcipher" # 'sqlcipher' | 'hashicorp'
   sqlcipher:
@@ -300,7 +362,9 @@ vault:
   #     method: "oidc"
   #     role: "developer-agent-role"
 
+# ==============================================================================
 # 2. ATLASSIAN SUITE INTEGRATION (JIRA & CONFLUENCE)
+# ==============================================================================
 atlassian:
   auth_mode: "oauth2" # OAuth 2.0 3LO with PKCE loopback
   cloud_domain: "fintech.atlassian.net"
@@ -316,7 +380,9 @@ atlassian:
     space_key: "ARCH"
     parent_page_title: "Technical Specifications"
 
+# ==============================================================================
 # 3. CONCURRENCY & DURABLE APPROVALS
+# ==============================================================================
 runtime:
   worktrees_dir: "../worktrees"
   concurrency:
@@ -328,30 +394,80 @@ runtime:
     before_rebase: "auto"
     before_ship: "manual_token"
 
+# ==============================================================================
 # 4. AST REPO-MAP CONTEXT CONDENSER
+# ==============================================================================
 context_condenser:
   engine: "tree_sitter"
   max_context_tokens: 16000
   include_signatures_only: true
   prune_irrelevant_files: true
 
-# 5. AGENTS & SMART FALLBACK ROUTER
-agents:
-  branch_2a:
-    primary: "claude"
-    cli_command: "claude"
-    fallback:
-      on_rate_limit: "chatgpt"
-      model: "gpt-4o"
-      auto_resume_primary_after_cooldown: true
-  branch_2b:
-    primary: "copilot"
-    cli_command: "gh copilot"
-    fallback:
-      on_rate_limit: "chatgpt"
-      model: "gpt-4o-mini"
+# ==============================================================================
+# 5. LAYER-BY-LAYER MODEL LOAD BALANCING (Toggleable per Stage)
+# ==============================================================================
+load_balancing:
+  global_enabled: true
+  cooldown_on_429_seconds: 300
 
+layers:
+  # Layer 1: Planning Architecture & Deep Domain Reasoning (Phase 2A)
+  planning_architecture:
+    enabled: true
+    strategy: "quota_aware" # 'quota_aware' | 'round_robin' | 'least_cost' | 'latency'
+    primary_fallback: "claude_pro_account_1"
+    pool:
+      - name: "claude_pro_account_1"
+        provider: "claude_code"
+        weight: 60
+      - name: "deepseek_r1_cloud"
+        provider: "openai_compatible"
+        base_url: "https://api.deepseek.com/v1"
+        model: "deepseek-reasoner"
+        weight: 40
+
+  # Layer 2: Scaffolding, Contracts & Test Suites (Phase 2B)
+  coding_scaffolding_tests:
+    enabled: true
+    strategy: "least_cost" # Prefers local Ollama; spills to Mistral Codestral
+    primary_fallback: "copilot_cli"
+    pool:
+      - name: "local_qwen_coder"
+        provider: "ollama"
+        base_url: "http://localhost:11434/v1"
+        model: "qwen2.5-coder:32b"
+        priority: 1 # Priority 1: Free local inference
+      - name: "mistral_codestral"
+        provider: "openai_compatible"
+        base_url: "https://api.mistral.ai/v1"
+        model: "codestral-latest"
+        priority: 2
+      - name: "copilot_cli"
+        provider: "github_copilot"
+        priority: 3
+
+  # Layer 3: Code Review & Jira Audit (Phase 3)
+  code_review_qa:
+    enabled: false # Direct passthrough
+    direct_agent: "chatgpt_pro"
+    model: "gpt-4o"
+    pool: []
+
+  # Layer 4: Self-Healing Compile, Lint & Invariant Retries (Phase 4)
+  self_healing_retries:
+    enabled: true
+    strategy: "latency_priority" # Sub-second fixes for rapid compilation feedback
+    pool:
+      - name: "groq_fast_llama"
+        provider: "groq"
+        model: "llama-3.3-70b-versatile" # 300+ tokens/sec
+      - name: "local_small_qwen"
+        provider: "ollama"
+        model: "qwen2.5-coder:7b"
+
+# ==============================================================================
 # 6. STACK DEFINITION & DETERMINISTIC COMMANDS
+# ==============================================================================
 stack:
   language: "typescript"
   package_manager: "pnpm"
@@ -378,21 +494,14 @@ stack:
         - "prisma"
         - "axios"
 
+# ==============================================================================
 # 7. PLANNING DAG SPECIFICATION
+# ==============================================================================
 planning_dag:
   enabled: true
   invariant: "zero_repo_mutations"
   base_branch: "origin/develop"
   max_self_heal_retries: 3
-  specialists:
-    branch_2a:
-      role: "architecture_and_domain"
-      cli_flags: "--allowedTools 'Read,Glob,Grep'"
-      output_manifest: "coreLogicSpec"
-    branch_2b:
-      role: "contracts_and_qa_matrix"
-      cli_flags: "--read-only"
-      output_manifest: "testAndBoilerplateSpec"
   gates:
     gate_0: { name: "Zero-Mutation Invariant", fail_code: 2, action: "abort" }
     gate_1: { name: "Disjoint Ownership (2A ∩ 2B = ∅)", fail_code: 10, remediate_with: "branch_2b" }
@@ -403,7 +512,9 @@ planning_dag:
     sync_confluence: true
     sync_jira: true
 
+# ==============================================================================
 # 8. CODING DAG SPECIFICATION
+# ==============================================================================
 coding_dag:
   enabled: true
   base_branch: "origin/develop"
@@ -414,15 +525,12 @@ coding_dag:
   self_healing:
     exit_10:
       name: "Formatting Drift"
-      remediate_with: "branch_2b"
       action: "run_format_fix"
     exit_20:
       name: "Compiler / Linter Violation"
-      remediate_with: "branch_2a"
       action: "repair_types_and_diagnostics"
     exit_30:
       name: "Test / Invariant Failure"
-      remediate_with: "branch_2a"
       action: "repair_assertion_or_domain_logic"
   shipment:
     target_branch: "develop"
@@ -434,7 +542,7 @@ coding_dag:
 
 ---
 
-## 8. Product Distribution & Packaging Model
+## 9. Product Distribution & Packaging Model
 
 Orquestia adopts a **Dual-Delivery Model**:
 
@@ -443,6 +551,6 @@ Orquestia adopts a **Dual-Delivery Model**:
    - Manages background daemon processes, worktree pools, and CI/CD headless execution without requiring an active graphical desktop.
 
 2. **VS Code / Cursor Extension (`.vsix`)**:
-   - Packaged via `@vscode/vsce package` yielding `orquestia-3.0.0.vsix`.
+   - Packaged via `@vscode/vsce package` yielding `orquestia-3.2.0.vsix`.
    - Embeds visual Kanban views for Jira, real-time diff previews for active worktrees, task palette integration, and one-click execution of `/orquestia-plan-dag` and `/orquestia-code-dag`.
    - Communicates seamlessly with the background Orquestia daemon via IPC/JSON-RPC.
