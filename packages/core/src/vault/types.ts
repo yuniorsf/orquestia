@@ -1,8 +1,9 @@
 /**
- * Security Vault Layer (`IVaultProvider`): a local embedded secrets store
- * covering the `subscriptions`, `credentials`, and `agent_access_audit`
- * schema. `SQLCipherVaultProvider` is the first concrete adapter; other
- * backends (e.g. HashiCorp Vault) implement the same port in later tickets.
+ * Security Vault Layer (`IVaultProvider`): a secrets store covering the
+ * `subscriptions`, `credentials`, and `agent_access_audit` schema.
+ * `SQLCipherVaultProvider` (local, embedded) and `HashiCorpVaultProvider`
+ * (enterprise, HTTP-backed) both implement this same port and are
+ * interchangeable.
  */
 export interface Credential {
   readonly key: string;
@@ -61,5 +62,21 @@ export class VaultDecryptionError extends Error {
   ) {
     super(message);
     this.name = 'VaultDecryptionError';
+  }
+}
+
+/**
+ * Abstracts how a HashiCorp Vault client token is obtained. `TokenAuthPort`
+ * (a static token) is the one real adapter shipped here; AppRole/OIDC are
+ * separate adapters implementing this same port in a future ticket.
+ */
+export interface IVaultAuthPort {
+  getToken(): Promise<string>;
+}
+
+export class VaultHttpError extends Error {
+  constructor(status: number, body: string) {
+    super(`HashiCorp Vault request failed (HTTP ${status}): ${body}`);
+    this.name = 'VaultHttpError';
   }
 }

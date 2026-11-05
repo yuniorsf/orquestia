@@ -9,13 +9,16 @@ describe('vault public API', () => {
     expect(vault.VAULT_IV_LENGTH_BYTES).toBe(12);
   });
 
-  it('exports the vault domain error type', () => {
+  it('exports the vault domain error types', () => {
     expect(vault.VaultDecryptionError).toBeTypeOf('function');
+    expect(vault.VaultHttpError).toBeTypeOf('function');
   });
 
   it('exports the real adapters', () => {
     expect(vault.CryptoRandomBytesPort).toBeTypeOf('function');
     expect(vault.MacosKeychainKeyDerivationPort).toBeTypeOf('function');
     expect(vault.SQLCipherVaultProvider).toBeTypeOf('function');
+    expect(vault.TokenAuthPort).toBeTypeOf('function');
+    expect(vault.HashiCorpVaultProvider).toBeTypeOf('function');
   });
 });
