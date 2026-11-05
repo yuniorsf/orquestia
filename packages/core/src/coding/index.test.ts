@@ -22,4 +22,13 @@ describe('coding public API', () => {
   it('exports the self-healing domain error type', () => {
     expect(coding.InvalidCodingSelfHealConfigError).toBeTypeOf('function');
   });
+
+  it('exports the Phase 5 rebase/reverify and ship services', () => {
+    expect(coding.RebaseAndReverifyService).toBeTypeOf('function');
+    expect(coding.ShipService).toBeTypeOf('function');
+  });
+
+  it('exports the ship domain error type', () => {
+    expect(coding.UnverifiedCodeError).toBeTypeOf('function');
+  });
 });

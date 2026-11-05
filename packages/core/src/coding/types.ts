@@ -124,3 +124,38 @@ export class InvalidCodingSelfHealConfigError extends Error {
     this.name = 'InvalidCodingSelfHealConfigError';
   }
 }
+
+/** Coding DAG Phase 5 (rebase step): outcome of fetching and rebasing a worktree onto `baseRef`. */
+export type RebaseOutcome =
+  | { readonly status: 'clean' }
+  | { readonly status: 'conflict'; readonly conflictingFiles: readonly string[] }
+  | { readonly status: 'failed'; readonly reason: string };
+
+export interface RebaseAndVerifyResult {
+  readonly rebase: RebaseOutcome;
+  /** Only populated when `rebase.status === 'clean'` — the mandatory post-rebase re-run of the Phase 3 oracle. */
+  readonly oracle: CodingOracleResult | null;
+}
+
+export interface ShipSpec {
+  readonly worktree: WorktreeHandle;
+  readonly commitMessage: string;
+  readonly baseBranch: string;
+  readonly prTitle: string;
+  readonly prBody: string;
+  readonly issueKey: string | null;
+  readonly jiraTargetStatus: string;
+}
+
+export type ShipStepName = 'stage' | 'commit' | 'push' | 'createPullRequest';
+
+export type ShipOutcome =
+  | { readonly status: 'shipped'; readonly pullRequestUrl: string }
+  | { readonly status: 'failed'; readonly failedStep: ShipStepName; readonly reason: string };
+
+export class UnverifiedCodeError extends Error {
+  constructor(taskId: string) {
+    super(`Cannot ship task "${taskId}": the Deterministic Coding Oracle has not passed.`);
+    this.name = 'UnverifiedCodeError';
+  }
+}
