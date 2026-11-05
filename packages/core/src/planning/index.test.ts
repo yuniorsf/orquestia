@@ -11,4 +11,10 @@ describe('planning public API', () => {
   it('exports the config domain error type', () => {
     expect(planning.ConfigValidationError).toBeTypeOf('function');
   });
+
+  it('exports the plan dispatch and oracle evaluator services, and the fs adapter', () => {
+    expect(planning.PlanDispatchService).toBeTypeOf('function');
+    expect(planning.PlanOracleEvaluator).toBeTypeOf('function');
+    expect(planning.FsFileExistencePort).toBeTypeOf('function');
+  });
 });
