@@ -1,9 +1,9 @@
 {
   "$schema": "https://antigravity.google/schemas/multi-agent-harness-v1.json",
   "project": {
-    "name": "<app>",
-    "stack": "generic",
-    "ticketPrefix": "PROJ",
+    "name": "Orquestia",
+    "stack": "typescript-node",
+    "ticketPrefix": "ORQ",
     "integrationBranch": "origin/develop",
     "mergeTargetBranch": "develop",
     "protectedBranches": ["main", "master"],
