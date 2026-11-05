@@ -26,4 +26,12 @@ describe('atlassian-auth public API', () => {
     expect(atlassianAuth.HttpTokenExchangePort).toBeTypeOf('function');
     expect(atlassianAuth.PkceOAuthFlowService).toBeTypeOf('function');
   });
+
+  it('exports the background token rotator and its adapters', () => {
+    expect(atlassianAuth.HttpTokenRefreshPort).toBeTypeOf('function');
+    expect(atlassianAuth.VaultTokenStorePort).toBeTypeOf('function');
+    expect(atlassianAuth.BackgroundTokenRotatorService).toBeTypeOf('function');
+    expect(atlassianAuth.REFRESH_LEAD_TIME_MS).toBe(5 * 60 * 1000);
+    expect(atlassianAuth.IntervalTokenRotationScheduler).toBeTypeOf('function');
+  });
 });

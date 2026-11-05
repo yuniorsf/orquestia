@@ -52,3 +52,23 @@ export class TokenExchangeError extends Error {
     this.name = 'TokenExchangeError';
   }
 }
+
+/**
+ * Background Token Rotator: renews the stored OAuth token 5 minutes
+ * before it expires, persisting access/refresh tokens and their
+ * absolute expiry so the rotator can decide when renewal is due.
+ */
+export interface StoredToken {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+  readonly expiresAtEpochMs: number;
+}
+
+export interface TokenStorePort {
+  getStoredToken(): Promise<StoredToken | null>;
+  saveToken(token: StoredToken): Promise<void>;
+}
+
+export interface TokenRefreshPort {
+  refresh(refreshToken: string): Promise<TokenResponse>;
+}
