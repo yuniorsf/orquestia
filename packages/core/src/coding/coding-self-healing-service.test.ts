@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { FakeCheckpointPort } from '../workspace/test-builders.js';
 import { CodingOracleRunner } from './coding-oracle-runner.js';
 import { CodingSelfHealingService } from './coding-self-healing-service.js';
-import {
-  FakeCheckpointPort,
-  FakeCodingRemediationDispatcherPort,
-  FakeCommandRunnerPort,
-} from './test-builders.js';
+import { FakeCodingRemediationDispatcherPort, FakeCommandRunnerPort } from './test-builders.js';
 import { InvalidCodingSelfHealConfigError, type OracleCommands } from './types.js';
 
 const commands: OracleCommands = {

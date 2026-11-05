@@ -1,13 +1,4 @@
-export interface WorktreeHandle {
-  readonly taskId: string;
-  readonly path: string;
-  readonly branch: string;
-}
-
-export interface WorktreeProvisioner {
-  create(taskId: string, baseRef: string): Promise<WorktreeHandle>;
-  destroy(taskId: string): Promise<void>;
-}
+import type { WorktreeHandle } from '../workspace/types.js';
 
 export interface QueueConfig {
   readonly maxParallelTasks: number;

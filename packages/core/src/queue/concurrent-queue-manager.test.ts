@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { FakeWorktreeProvisioner } from '../workspace/test-builders.js';
 import { ConcurrentQueueManager } from './concurrent-queue-manager.js';
 import {
   DuplicateTaskError,
@@ -6,7 +7,6 @@ import {
   InvalidQueueTransitionError,
   UnknownQueueEntryError,
 } from './types.js';
-import { FakeWorktreeProvisioner } from './test-builders.js';
 
 function createManager(maxParallelTasks = 1, autoCleanupOnMerge = true) {
   const provisioner = new FakeWorktreeProvisioner();

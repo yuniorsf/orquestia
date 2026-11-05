@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FakeWorktreeProvisioner } from '../queue/test-builders.js';
+import { FakeWorktreeProvisioner } from '../workspace/test-builders.js';
 import { CodingTaskProvisioningService } from './coding-task-provisioning-service.js';
 import { DisjointAllocationValidator } from './disjoint-allocation-validator.js';
 import { DisjointAllocationError, type CodingTaskManifest } from './types.js';

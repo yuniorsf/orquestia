@@ -7,8 +7,8 @@ const execFileAsync = promisify(execFile);
 
 /**
  * Provisions the physical `../worktrees/<taskId>` sandboxes backing the
- * Concurrent Queue Manager, via plain `git worktree add|remove` (the same
- * primitive `scripts/agent-sandbox.sh` wraps for interactive/CLI use).
+ * Workspace Engine, via plain `git worktree add|remove` (the same primitive
+ * `scripts/agent-sandbox.sh` wraps for interactive/CLI use).
  */
 export class GitWorktreeProvisioner implements WorktreeProvisioner {
   constructor(

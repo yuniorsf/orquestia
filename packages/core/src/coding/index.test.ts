@@ -16,7 +16,6 @@ describe('coding public API', () => {
     expect(coding.CodingOracleRunner).toBeTypeOf('function');
     expect(coding.CodingSelfHealingService).toBeTypeOf('function');
     expect(coding.ShellCommandRunner).toBeTypeOf('function');
-    expect(coding.GitStashCheckpoint).toBeTypeOf('function');
   });
 
   it('exports the self-healing domain error type', () => {

@@ -1,3 +1,4 @@
+import type { WorktreeProvisioner } from '../workspace/types.js';
 import {
   DuplicateTaskError,
   InvalidQueueConfigError,
@@ -5,7 +6,6 @@ import {
   UnknownQueueEntryError,
   type QueueConfig,
   type QueueEntry,
-  type WorktreeProvisioner,
 } from './types.js';
 
 interface MutableEntry {

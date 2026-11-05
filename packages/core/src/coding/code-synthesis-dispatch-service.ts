@@ -1,4 +1,4 @@
-import type { WorktreeHandle } from '../queue/types.js';
+import type { WorktreeHandle } from '../workspace/types.js';
 import type {
   CodeSynthesisDispatcherPort,
   CodeSynthesisResult,

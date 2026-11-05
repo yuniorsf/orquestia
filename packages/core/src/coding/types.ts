@@ -1,5 +1,5 @@
 import type { FileManifestEntry, SpecialistBranch } from '../planning/types.js';
-import type { WorktreeHandle } from '../queue/types.js';
+import type { WorktreeHandle } from '../workspace/types.js';
 
 /**
  * Coding DAG Phase 1 input: the disjoint file allocations for `coder_core`
@@ -85,15 +85,6 @@ export interface CodingOracleResult {
   readonly exitCode: CodingOracleExitCode;
   readonly failedStage: OracleStageName | null;
   readonly runs: readonly OracleStageRun[];
-}
-
-export interface CheckpointHandle {
-  readonly id: string;
-}
-
-export interface CheckpointPort {
-  create(): Promise<CheckpointHandle>;
-  rollback(handle: CheckpointHandle): Promise<void>;
 }
 
 export interface CodingRemediationDispatcherPort {

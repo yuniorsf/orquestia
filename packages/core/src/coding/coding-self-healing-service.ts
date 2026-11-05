@@ -1,7 +1,7 @@
+import type { CheckpointPort } from '../workspace/types.js';
 import type { CodingOracleRunner } from './coding-oracle-runner.js';
 import {
   InvalidCodingSelfHealConfigError,
-  type CheckpointPort,
   type CodingRemediationDispatcherPort,
   type CodingSelfHealAttempt,
   type CodingSelfHealConfig,
