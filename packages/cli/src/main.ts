@@ -16,6 +16,8 @@ import {
   type ApprovalGateModes,
 } from '@orquestia/core';
 import { ApprovalsCommand } from './approvals-command.js';
+import { CodeCommand } from './code-command.js';
+import { buildCodeCommandDependencies } from './code-command-wiring.js';
 import { CommandRouter } from './command-router.js';
 import { PendingCommand } from './pending-command.js';
 import { PlanCommand } from './plan-command.js';
@@ -54,15 +56,12 @@ export function buildRouter(cwd: string): CommandRouter {
     new FsFileExistencePort(),
     (taskId) => new AgentSpecialistDispatcher(agentRouter, cwd, taskId),
   );
+  const codeCommand = new CodeCommand(buildCodeCommandDependencies(cwd, agentRouter));
 
   return new CommandRouter([
     new ApprovalsCommand(manager),
     planCommand,
-    new PendingCommand(
-      'code',
-      'Run the Coding DAG (domain implementation + verification)',
-      'full multi-service wiring across the Coding DAG and agent adapters — needs a dedicated follow-up ticket',
-    ),
+    codeCommand,
     new PendingCommand(
       'auth',
       'Authenticate with Atlassian (OAuth 2.0 + PKCE)',

@@ -2,16 +2,30 @@ import type {
   ApprovalState,
   ApprovalStateStore,
   BaselineGitStatus,
+  CheckpointHandle,
+  CheckpointPort,
   Clock,
+  CodeSynthesisDispatcherPort,
+  CodeSynthesisOutput,
+  CodingRemediationDispatcherPort,
+  CommandResult as CoreCommandResult,
+  CommandRunnerPort,
   ConfigReaderPort,
   FileExistencePort,
+  FileManifestEntry,
   GitStatusPort,
+  OracleStageName,
   OrquestiaConfig,
+  ShipOutcome,
+  ShipSpec,
   SpecialistBranch,
   SpecialistDispatcherPort,
   SpecialistOutput,
   TokenGenerator,
+  WorktreeHandle,
+  WorktreeProvisioner,
 } from '@orquestia/core';
+import type { CodeShipService } from './code-command.js';
 import type { CliCommand, CommandResult } from './types.js';
 
 export class FakeClock implements Clock {
@@ -82,6 +96,90 @@ export class FakeSpecialistDispatcherPort implements SpecialistDispatcherPort {
   async dispatch(branch: SpecialistBranch): Promise<SpecialistOutput> {
     this.dispatchedBranches.push(branch);
     return this.outputs[branch];
+  }
+}
+
+export class FakeWorktreeProvisioner implements WorktreeProvisioner {
+  readonly created: Array<{ taskId: string; baseRef: string }> = [];
+
+  constructor(private readonly handle: (taskId: string) => WorktreeHandle) {}
+
+  async create(taskId: string, baseRef: string): Promise<WorktreeHandle> {
+    this.created.push({ taskId, baseRef });
+    return this.handle(taskId);
+  }
+
+  // CodeCommand never destroys a worktree itself — cleanup is the
+  // orchestration layer's job (`scripts/agent-sandbox.sh destroy`), same
+  // as every other ticket shipped this session.
+  async destroy(): Promise<void> {}
+}
+
+export class FakeCheckpointPort implements CheckpointPort {
+  readonly rolledBackTo: CheckpointHandle[] = [];
+  private sequence = 0;
+
+  async create(): Promise<CheckpointHandle> {
+    this.sequence += 1;
+    return { id: `checkpoint-${this.sequence}` };
+  }
+
+  async rollback(handle: CheckpointHandle): Promise<void> {
+    this.rolledBackTo.push(handle);
+  }
+}
+
+export class FakeCodeSynthesisDispatcherPort implements CodeSynthesisDispatcherPort {
+  readonly calls: Array<{ branch: SpecialistBranch; manifest: readonly FileManifestEntry[] }> = [];
+
+  constructor(
+    private readonly resolve: (branch: SpecialistBranch) => CodeSynthesisOutput = (branch) => ({
+      branch,
+      filesWritten: [],
+    }),
+  ) {}
+
+  async synthesize(
+    branch: SpecialistBranch,
+    _worktree: WorktreeHandle,
+    manifest: readonly FileManifestEntry[],
+  ): Promise<CodeSynthesisOutput> {
+    this.calls.push({ branch, manifest });
+    return this.resolve(branch);
+  }
+}
+
+export class FakeCodingRemediationDispatcherPort implements CodingRemediationDispatcherPort {
+  readonly calls: Array<{ exitCode: 10 | 20 | 30; failedStage: OracleStageName }> = [];
+
+  async remediate(exitCode: 10 | 20 | 30, failedStage: OracleStageName): Promise<void> {
+    this.calls.push({ exitCode, failedStage });
+  }
+}
+
+export class FakeCliCommandRunnerPort implements CommandRunnerPort {
+  readonly calls: string[] = [];
+
+  constructor(private readonly resultsByCommand: Record<string, CoreCommandResult>) {}
+
+  async run(command: string): Promise<CoreCommandResult> {
+    this.calls.push(command);
+    const result = this.resultsByCommand[command];
+    if (!result) {
+      throw new Error(`FakeCliCommandRunnerPort: no result configured for command "${command}".`);
+    }
+    return result;
+  }
+}
+
+export class FakeCodeShipService implements CodeShipService {
+  readonly calls: Array<{ taskId: string; spec: ShipSpec }> = [];
+
+  constructor(private readonly outcome: ShipOutcome) {}
+
+  async ship(taskId: string, _oracleResult: unknown, spec: ShipSpec): Promise<ShipOutcome> {
+    this.calls.push({ taskId, spec });
+    return this.outcome;
   }
 }
 

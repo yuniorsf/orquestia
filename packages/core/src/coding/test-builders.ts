@@ -1,5 +1,6 @@
 import type { FileManifestEntry, SpecialistBranch } from '../planning/types.js';
 import type { WorktreeHandle } from '../workspace/types.js';
+import type { FileWriterPort } from './synthesis-json-protocol.js';
 import type {
   CodeSynthesisDispatcherPort,
   CodeSynthesisOutput,
@@ -8,6 +9,14 @@ import type {
   CommandRunnerPort,
   OracleStageName,
 } from './types.js';
+
+export class FakeFileWriterPort implements FileWriterPort {
+  readonly written: Array<{ path: string; content: string }> = [];
+
+  async write(path: string, content: string): Promise<void> {
+    this.written.push({ path, content });
+  }
+}
 
 export class FakeCodeSynthesisDispatcherPort implements CodeSynthesisDispatcherPort {
   readonly calls: Array<{

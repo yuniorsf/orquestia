@@ -30,4 +30,11 @@ describe('coding public API', () => {
   it('exports the ship domain error type', () => {
     expect(coding.UnverifiedCodeError).toBeTypeOf('function');
   });
+
+  it('exports the real agent-backed synthesis/remediation dispatchers, the fs file writer, and the synthesis domain error', () => {
+    expect(coding.AgentCodeSynthesisDispatcher).toBeTypeOf('function');
+    expect(coding.AgentCodingRemediationDispatcher).toBeTypeOf('function');
+    expect(coding.FsFileWriter).toBeTypeOf('function');
+    expect(coding.MalformedSynthesisOutputError).toBeTypeOf('function');
+  });
 });
