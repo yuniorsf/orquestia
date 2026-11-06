@@ -38,3 +38,25 @@ export class UnknownAgentError extends Error {
     this.name = 'UnknownAgentError';
   }
 }
+
+export type DispatchTraceEvent =
+  | {
+      readonly phase: 'start';
+      readonly branch: SpecialistBranch;
+      readonly agent: AgentName;
+      readonly prompt: string;
+    }
+  | {
+      readonly phase: 'complete';
+      readonly branch: SpecialistBranch;
+      readonly agent: AgentName;
+      readonly exitCode: number;
+      readonly stdout: string;
+      readonly stderr: string;
+      readonly durationMs: number;
+    };
+
+/** Injected into {@link AgentRouter} to observe each dispatch; absent by default so existing callers see no behavior change. */
+export interface TraceSinkPort {
+  onDispatchEvent(event: DispatchTraceEvent): void;
+}

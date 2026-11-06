@@ -18,12 +18,14 @@ import {
   copilotCliSpec,
   type AgentRoutingConfig,
   type ApprovalGateModes,
+  type TraceSinkPort,
 } from '@orquestia/core';
 import { ApprovalsCommand } from './approvals-command.js';
 import { AuthCommand } from './auth-command.js';
 import { CodeCommand } from './code-command.js';
 import { buildCodeCommandDependencies, REPO_BASE_REF } from './code-command-wiring.js';
 import { CommandRouter } from './command-router.js';
+import { ConsoleTraceSink, type VerbosityLevel } from './console-trace-sink.js';
 import { ChildProcessDaemonLauncher } from './daemon-process-launcher.js';
 import { PlanCommand } from './plan-command.js';
 import { buildPlanDispatcherFactory } from './plan-command-wiring.js';
@@ -45,8 +47,44 @@ const DEFAULT_AGENT_ROUTING: AgentRoutingConfig = {
 
 const QUEUE_DAEMON_SCRIPT_PATH = fileURLToPath(new URL('./queue-daemon.js', import.meta.url));
 
+const MAX_VERBOSITY_LEVEL = 3;
+
+/**
+ * Extracts a global `-v`/`-vv`/`-vvv` (repeatable or stacked) or
+ * `--verbosity <0-3>` flag from `argv`, returning the remaining args
+ * unchanged so command-specific parsing (e.g. `code`'s `--ship`) is
+ * unaffected by its position. Multiple occurrences take the highest level.
+ */
+export function parseVerbosity(argv: readonly string[]): {
+  readonly level: VerbosityLevel;
+  readonly rest: readonly string[];
+} {
+  let level = 0;
+  const rest: string[] = [];
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i] as string;
+    const shorthandMatch = /^-(v+)$/.exec(arg);
+    if (shorthandMatch) {
+      level = Math.max(level, (shorthandMatch[1] as string).length);
+      continue;
+    }
+    if (arg === '--verbosity') {
+      const value = Number(argv[i + 1]);
+      if (Number.isInteger(value) && value >= 0 && value <= MAX_VERBOSITY_LEVEL) {
+        level = Math.max(level, value);
+        i += 1;
+        continue;
+      }
+    }
+    rest.push(arg);
+  }
+
+  return { level: Math.min(level, MAX_VERBOSITY_LEVEL) as VerbosityLevel, rest };
+}
+
 /** Wires the full `orquestia` command surface against `<cwd>/.orquestia/`. */
-export function buildRouter(cwd: string): CommandRouter {
+export function buildRouter(cwd: string, traceSink?: TraceSinkPort): CommandRouter {
   const stateStore = new JsonFileApprovalStateStore(join(cwd, '.orquestia', 'state.json'));
   const manager = new DurableApprovalManager(
     stateStore,
@@ -58,6 +96,8 @@ export function buildRouter(cwd: string): CommandRouter {
   const agentRouter = new AgentRouter(
     [new CliProcessAgentAdapter(claudeCodeCliSpec), new CliProcessAgentAdapter(copilotCliSpec)],
     DEFAULT_AGENT_ROUTING,
+    new SystemClock(),
+    traceSink,
   );
   const planCommand = new PlanCommand(
     new GitStatusSnapshotter(cwd),
@@ -103,6 +143,9 @@ export function buildRouter(cwd: string): CommandRouter {
 }
 
 export async function runCli(argv: readonly string[], cwd: string): Promise<CommandResult> {
-  const router = buildRouter(cwd);
-  return router.run(argv);
+  const { level, rest } = parseVerbosity(argv);
+  const traceSink =
+    level > 0 ? new ConsoleTraceSink(level, (line) => process.stderr.write(line)) : undefined;
+  const router = buildRouter(cwd, traceSink);
+  return router.run(rest);
 }

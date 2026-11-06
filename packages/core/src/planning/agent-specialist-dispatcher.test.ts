@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AgentRouter } from '../agents/agent-router.js';
-import { FakeAgentAdapter } from '../agents/test-builders.js';
+import { FakeAgentAdapter, FakeClock } from '../agents/test-builders.js';
 import {
   AgentSpecialistDispatcher,
   MalformedSpecialistOutputError,
@@ -20,7 +20,7 @@ describe('AgentSpecialistDispatcher', () => {
         '{"fileManifest":[{"path":"src/foo.ts","kind":"NEW"}],"codeSnippets":["const x = 1;"]}',
       ),
     );
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     const output = await dispatcher.dispatch('2A');
@@ -42,7 +42,7 @@ describe('AgentSpecialistDispatcher', () => {
       'copilot_cli',
       jsonOutput('```json\n{"fileManifest":[],"codeSnippets":[]}\n```'),
     );
-    const router = new AgentRouter([adapterB], ROUTING);
+    const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     const output = await dispatcher.dispatch('2B');
@@ -57,7 +57,7 @@ describe('AgentSpecialistDispatcher', () => {
         'Here is my analysis:\n\n{"fileManifest":[],"codeSnippets":[]}\n\nLet me know if you need anything else!',
       ),
     );
-    const router = new AgentRouter([adapterB], ROUTING);
+    const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     const output = await dispatcher.dispatch('2B');
@@ -67,7 +67,7 @@ describe('AgentSpecialistDispatcher', () => {
 
   it('throws MalformedSpecialistOutputError on invalid JSON', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('not json at all'));
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     await expect(dispatcher.dispatch('2A')).rejects.toThrow(MalformedSpecialistOutputError);
@@ -75,7 +75,7 @@ describe('AgentSpecialistDispatcher', () => {
 
   it('throws when fileManifest or codeSnippets is missing/not an array', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('{"fileManifest":[]}'));
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     await expect(dispatcher.dispatch('2A')).rejects.toThrow(MalformedSpecialistOutputError);
@@ -86,7 +86,7 @@ describe('AgentSpecialistDispatcher', () => {
       'claude_code',
       jsonOutput('{"fileManifest":[{"path":"x","kind":"DELETE"}],"codeSnippets":[]}'),
     );
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     await expect(dispatcher.dispatch('2A')).rejects.toThrow(MalformedSpecialistOutputError);
@@ -97,7 +97,7 @@ describe('AgentSpecialistDispatcher', () => {
       'claude_code',
       jsonOutput('{"fileManifest":[],"codeSnippets":[42]}'),
     );
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
 
     await expect(dispatcher.dispatch('2A')).rejects.toThrow(MalformedSpecialistOutputError);
