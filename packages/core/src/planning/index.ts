@@ -8,3 +8,7 @@ export { FsFileExistencePort } from './fs-file-existence-port.js';
 export { PlanningSelfHealingService } from './planning-self-healing-service.js';
 export { PlanSynthesisService } from './plan-synthesis-service.js';
 export { FsPlanSpecWriter } from './fs-plan-spec-writer.js';
+export {
+  AgentSpecialistDispatcher,
+  MalformedSpecialistOutputError,
+} from './agent-specialist-dispatcher.js';

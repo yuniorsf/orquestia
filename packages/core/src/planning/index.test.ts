@@ -28,4 +28,9 @@ describe('planning public API', () => {
     expect(planning.InvalidSelfHealConfigError).toBeTypeOf('function');
     expect(planning.UnverifiedPlanError).toBeTypeOf('function');
   });
+
+  it('exports the real agent-backed specialist dispatcher and its domain error', () => {
+    expect(planning.AgentSpecialistDispatcher).toBeTypeOf('function');
+    expect(planning.MalformedSpecialistOutputError).toBeTypeOf('function');
+  });
 });
