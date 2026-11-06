@@ -11,7 +11,13 @@ function provider(overrides: Partial<ProviderEntry> & { name: string }): Provide
 function layer(
   overrides: Partial<LayerConfig> & { strategy: LayerConfig['strategy'] },
 ): LayerConfig {
-  return { name: 'planning_architecture', enabled: true, providers: [], ...overrides };
+  return {
+    name: 'planning_architecture',
+    enabled: true,
+    primaryFallback: false,
+    providers: [],
+    ...overrides,
+  };
 }
 
 describe('DefaultStrategyRouter', () => {

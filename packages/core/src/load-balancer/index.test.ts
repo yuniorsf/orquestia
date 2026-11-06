@@ -7,10 +7,15 @@ describe('load-balancer public API', () => {
     expect(loadBalancer.LayerLoadBalancer).toBeTypeOf('function');
   });
 
+  it('exports the config parser', () => {
+    expect(loadBalancer.parseLayerPoolsConfig).toBeTypeOf('function');
+  });
+
   it('exports the domain error types', () => {
     expect(loadBalancer.UnknownLayerError).toBeTypeOf('function');
     expect(loadBalancer.DisabledLayerError).toBeTypeOf('function');
     expect(loadBalancer.NoProvidersAvailableError).toBeTypeOf('function');
     expect(loadBalancer.UnknownStrategyError).toBeTypeOf('function');
+    expect(loadBalancer.InvalidLayerPoolsConfigError).toBeTypeOf('function');
   });
 });
