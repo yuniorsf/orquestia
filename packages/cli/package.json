@@ -2,6 +2,7 @@
   "name": "@orquestia/cli",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "bin": {
     "orquestia": "dist/index.js"
