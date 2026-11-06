@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace=@orquestia/core && npm run build --workspaces --if-present",
     "test": "vitest run --coverage",
     "test:arch": "echo \"[harness] no dedicated architecture test suite yet\"",
     "lint": "eslint .",

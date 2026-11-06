@@ -8,9 +8,14 @@
   },
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "build:sea": "npm run build && node dist/build-sea.js"
   },
   "dependencies": {
     "@orquestia/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "postject": "^1.0.0-alpha.6"
   }
 }

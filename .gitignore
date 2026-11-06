@@ -37,6 +37,7 @@ node_modules/
 .nuxt/
 .turbo/
 coverage/
+packages/cli/sea-config.json
 
 # Go / Rust / JVM / .NET
 bin/
