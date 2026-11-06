@@ -11,5 +11,10 @@ package-lock.json
 .antigravity/
 .github/
 .harness/
+
+# Per-architecture governance file templates contain {{TOKEN}} placeholders
+# that are not valid JSON/Markdown until scripts/init-orchestration.sh
+# substitutes them.
+templates/
 BannedSymbols.txt
 Directory.Build.props
