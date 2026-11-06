@@ -49,7 +49,7 @@ describe('parseOrchestrationConfig', () => {
 
   it('throws on an unknown architecture name', () => {
     expect(() =>
-      parseOrchestrationConfig({ orchestration: { architecture: 'blackboard' } }),
+      parseOrchestrationConfig({ orchestration: { architecture: 'made_up_architecture' } }),
     ).toThrow(/Unknown "orchestration.architecture"/);
   });
 
@@ -109,5 +109,77 @@ describe('parseOrchestrationConfig', () => {
         },
       }),
     ).toThrow('"orchestration.hierarchical_n_worker.workers[0]" must be a mapping.');
+  });
+
+  it('parses a handoff_swarm architecture with its ordered worker list', () => {
+    const raw = {
+      orchestration: {
+        architecture: 'handoff_swarm',
+        handoff_swarm: {
+          workers: [
+            { name: 'first', agent: 'claude_code' },
+            { name: 'second', agent: 'copilot_cli' },
+          ],
+        },
+      },
+    };
+
+    const config = parseOrchestrationConfig(raw);
+
+    expect(config).toEqual({
+      architecture: 'handoff_swarm',
+      handoffSwarm: {
+        workers: [
+          { name: 'first', agent: 'claude_code' },
+          { name: 'second', agent: 'copilot_cli' },
+        ],
+      },
+    });
+  });
+
+  it('throws when handoff_swarm.workers is missing', () => {
+    expect(() =>
+      parseOrchestrationConfig({
+        orchestration: { architecture: 'handoff_swarm', handoff_swarm: {} },
+      }),
+    ).toThrow('"orchestration.handoff_swarm.workers" must be a non-empty list.');
+  });
+
+  it('parses a blackboard architecture with its contributor list', () => {
+    const raw = {
+      orchestration: {
+        architecture: 'blackboard',
+        blackboard: {
+          contributors: [
+            { name: 'alpha', agent: 'claude_code' },
+            { name: 'beta', agent: 'copilot_cli' },
+          ],
+        },
+      },
+    };
+
+    const config = parseOrchestrationConfig(raw);
+
+    expect(config).toEqual({
+      architecture: 'blackboard',
+      blackboard: {
+        contributors: [
+          { name: 'alpha', agent: 'claude_code' },
+          { name: 'beta', agent: 'copilot_cli' },
+        ],
+      },
+    });
+  });
+
+  it('throws when blackboard.contributors is missing', () => {
+    expect(() =>
+      parseOrchestrationConfig({ orchestration: { architecture: 'blackboard', blackboard: {} } }),
+    ).toThrow('"orchestration.blackboard.contributors" must be a non-empty list.');
+  });
+
+  it('throws when blackboard is selected but its sub-section is missing', () => {
+    expect(() =>
+      parseOrchestrationConfig({ orchestration: { architecture: 'blackboard' } }),
+    ).toThrow(InvalidOrchestrationConfigError);
   });
 });

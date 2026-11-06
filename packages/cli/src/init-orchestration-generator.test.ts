@@ -158,3 +158,124 @@ describe('scripts/init-orchestration.sh — hierarchical_n_worker', () => {
     await expect(readFile(join(scratchDir, 'orquestia.config.yaml'), 'utf8')).rejects.toThrow();
   });
 });
+
+describe('scripts/init-orchestration.sh — handoff_swarm', () => {
+  it('rejects being run with zero worker arguments', () => {
+    expect(() => runGenerator(['handoff_swarm', '--target-dir', scratchDir])).toThrow();
+  });
+
+  it('generates a sequential handoff chain reflecting the given argument order', async () => {
+    runGenerator([
+      'handoff_swarm',
+      '--target-dir',
+      scratchDir,
+      'first:claude_code',
+      'second:copilot_cli',
+    ]);
+
+    const claudeMd = await readFile(join(scratchDir, 'CLAUDE.md'), 'utf8');
+    expect(claudeMd).toContain('dispatched **in this order**');
+    expect(claudeMd).toContain('currently **2** configured');
+
+    const codeGenDagJson = JSON.parse(
+      await readFile(join(scratchDir, '.antigravity/workflows/code-gen-dag.json'), 'utf8'),
+    ) as {
+      metadata: { workerCount: number };
+      phases: Array<{ chain?: Array<{ branchId: string }> }>;
+    };
+    expect(codeGenDagJson.metadata.workerCount).toBe(2);
+    expect(codeGenDagJson.phases[1]?.chain?.map((c) => c.branchId)).toEqual(['first', 'second']);
+
+    const codeGenDagMd = await readFile(
+      join(scratchDir, '.antigravity/workflows/code-gen-dag.md'),
+      'utf8',
+    );
+    expect(codeGenDagMd).toContain('W0 --> W1');
+    expect(codeGenDagMd).toContain('W1 --> P3');
+  });
+
+  it('appends a parseable orchestration: section keyed by "workers"', async () => {
+    const configPath = join(scratchDir, 'orquestia.config.yaml');
+    await writeFile(configPath, 'version: "3.0"\nproject_name: "Test"\n', 'utf8');
+
+    runGenerator([
+      'handoff_swarm',
+      '--target-dir',
+      scratchDir,
+      'first:claude_code',
+      'second:copilot_cli',
+    ]);
+
+    const config = await new YamlConfigReader(configPath).loadConfig();
+    const orchestration = parseOrchestrationConfig(config.raw);
+
+    expect(orchestration).toEqual({
+      architecture: 'handoff_swarm',
+      handoffSwarm: {
+        workers: [
+          { name: 'first', agent: 'claude_code' },
+          { name: 'second', agent: 'copilot_cli' },
+        ],
+      },
+    });
+  });
+});
+
+describe('scripts/init-orchestration.sh — blackboard', () => {
+  it('rejects being run with zero contributor arguments', () => {
+    expect(() => runGenerator(['blackboard', '--target-dir', scratchDir])).toThrow();
+  });
+
+  it('generates shared-workspace governance files with no disjoint-ownership language', async () => {
+    runGenerator([
+      'blackboard',
+      '--target-dir',
+      scratchDir,
+      'alpha:claude_code',
+      'beta:copilot_cli',
+    ]);
+
+    const claudeMd = await readFile(join(scratchDir, 'CLAUDE.md'), 'utf8');
+    expect(claudeMd).toContain('do NOT own disjoint file paths');
+    expect(claudeMd).toContain('currently **2** configured');
+
+    const copilotInstructions = await readFile(
+      join(scratchDir, '.github/copilot-instructions.md'),
+      'utf8',
+    );
+    expect(copilotInstructions).toContain('Currently: **beta**');
+    expect(copilotInstructions).not.toContain('--worker-scope "<your-worker-name>');
+
+    const codeGenDagJson = JSON.parse(
+      await readFile(join(scratchDir, '.antigravity/workflows/code-gen-dag.json'), 'utf8'),
+    ) as { metadata: { workerCount: number; conflictResolution: string } };
+    expect(codeGenDagJson.metadata.workerCount).toBe(2);
+    expect(codeGenDagJson.metadata.conflictResolution).toBe('last_writer_wins');
+  });
+
+  it('appends a parseable orchestration: section keyed by "contributors"', async () => {
+    const configPath = join(scratchDir, 'orquestia.config.yaml');
+    await writeFile(configPath, 'version: "3.0"\nproject_name: "Test"\n', 'utf8');
+
+    runGenerator([
+      'blackboard',
+      '--target-dir',
+      scratchDir,
+      'alpha:claude_code',
+      'beta:copilot_cli',
+    ]);
+
+    const config = await new YamlConfigReader(configPath).loadConfig();
+    const orchestration = parseOrchestrationConfig(config.raw);
+
+    expect(orchestration).toEqual({
+      architecture: 'blackboard',
+      blackboard: {
+        contributors: [
+          { name: 'alpha', agent: 'claude_code' },
+          { name: 'beta', agent: 'copilot_cli' },
+        ],
+      },
+    });
+  });
+});

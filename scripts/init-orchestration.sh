@@ -11,11 +11,13 @@
 #
 # Usage:
 #   ./scripts/init-orchestration.sh fixed_tri_planar [--target-dir <dir>]
-#   ./scripts/init-orchestration.sh hierarchical_n_worker [--target-dir <dir>] <name:agent> [<name:agent> ...]
+#   ./scripts/init-orchestration.sh <hierarchical_n_worker|handoff_swarm|blackboard> [--target-dir <dir>] <name:agent> [<name:agent> ...]
 #
 # fixed_tri_planar takes no worker arguments — it is the default, fixed 2A/2B
-# topology. hierarchical_n_worker requires at least one "name:agent" pair,
-# e.g. "architecture:claude_code" "contracts:copilot_cli".
+# topology. Every other architecture requires at least one "name:agent" pair,
+# e.g. "architecture:claude_code" "contracts:copilot_cli" (handoff_swarm
+# treats the argument order as the dispatch sequence; blackboard calls them
+# "contributors" rather than "workers" — same "name:agent" shape either way).
 #
 # Also appends an "orchestration:" section to <target-dir>/orquestia.config.yaml
 # — only if that file has none already (switching an existing selection is a
@@ -30,10 +32,12 @@ TEMPLATES_ROOT="${REPO_ROOT}/templates/orchestration"
 ARCHITECTURE="${1:-}"
 if [[ -z "${ARCHITECTURE}" || "${ARCHITECTURE}" == "-h" || "${ARCHITECTURE}" == "--help" ]]; then
     cat <<EOF
-Usage: $(basename "$0") <fixed_tri_planar|hierarchical_n_worker> [--target-dir <dir>] [name:agent ...]
+Usage: $(basename "$0") <architecture> [--target-dir <dir>] [name:agent ...]
 
   fixed_tri_planar        No worker arguments. Regenerates the default, fixed 2A/2B governance files.
-  hierarchical_n_worker   One or more "name:agent" pairs, e.g. "architecture:claude_code" "contracts:copilot_cli".
+  hierarchical_n_worker   One or more "name:agent" pairs, parallel fan-out + join, e.g. "architecture:claude_code" "contracts:copilot_cli".
+  handoff_swarm           One or more "name:agent" pairs, dispatched strictly in the order given (sequential handoff, no join barrier).
+  blackboard              One or more "name:agent" pairs ("contributors"); shared workspace, no disjoint ownership, merged by last-writer-wins.
 EOF
     exit 0
 fi
@@ -64,8 +68,8 @@ if [[ "${ARCHITECTURE}" == "fixed_tri_planar" && ${#WORKER_ARGS[@]} -gt 0 ]]; th
     printf "\033[1;31m[INIT-ORCHESTRATION:ERROR]\033[0m fixed_tri_planar takes no worker arguments.\n" >&2
     exit 2
 fi
-if [[ "${ARCHITECTURE}" == "hierarchical_n_worker" && ${#WORKER_ARGS[@]} -eq 0 ]]; then
-    printf "\033[1;31m[INIT-ORCHESTRATION:ERROR]\033[0m hierarchical_n_worker requires at least one \"name:agent\" argument.\n" >&2
+if [[ "${ARCHITECTURE}" != "fixed_tri_planar" && ${#WORKER_ARGS[@]} -eq 0 ]]; then
+    printf "\033[1;31m[INIT-ORCHESTRATION:ERROR]\033[0m %s requires at least one \"name:agent\" argument.\n" "${ARCHITECTURE}" >&2
     exit 2
 fi
 
@@ -94,8 +98,10 @@ for arg in worker_args:
 def agent_display(agent: str) -> str:
     return agent.replace("_", "-")
 
+MULTI_WORKER_ARCHITECTURES = {"hierarchical_n_worker", "handoff_swarm", "blackboard"}
+
 tokens = {}
-if architecture == "hierarchical_n_worker":
+if architecture in MULTI_WORKER_ARCHITECTURES:
     tokens["{{WORKER_COUNT}}"] = str(len(workers))
     tokens["{{WORKER_TABLE}}"] = "\n".join(
         ["| Worker | Agent |", "|---|---|"]
@@ -110,6 +116,12 @@ if architecture == "hierarchical_n_worker":
     tokens["{{MERMAID_WORKER_EDGES}}"] = "\n".join(
         f"    W{i} --> P3" for i in range(len(workers))
     )
+    # handoff_swarm's diagram is a linear chain (W0 --> W1 --> W2 --> P3),
+    # not parallel fan-in — order is the dispatch sequence.
+    chain_links = [f"W{i}" for i in range(len(workers))] + ["P3"]
+    tokens["{{MERMAID_WORKER_CHAIN}}"] = "\n".join(
+        f'        W{i}["{w["name"]} ({agent_display(w["agent"])})"]' for i, w in enumerate(workers)
+    ) + "\n" + "\n".join(f"        {a} --> {b}" for a, b in zip(chain_links[:-1], chain_links[1:]))
 
     tokens["{{WORKERS_JSON}}"] = json.dumps(
         [
@@ -137,7 +149,9 @@ if architecture == "hierarchical_n_worker":
         indent=2,
     )
     # Embedded in a JSON string value (the "command" field below), so quotes
-    # must be JSON-escaped rather than literal.
+    # must be JSON-escaped rather than literal. blackboard omits this
+    # entirely from its own template (no --worker-scope is passed), but the
+    # token is still computed uniformly here in case a future template needs it.
     tokens["{{WORKER_SCOPE_FLAGS}}"] = " ".join(
         f'--worker-scope \\"{w["name"]}:<{w["name"]}-paths>\\"' for w in workers
     )
@@ -177,15 +191,18 @@ if config_path.exists():
         if architecture == "fixed_tri_planar":
             section = "\norchestration:\n  architecture: \"fixed_tri_planar\"\n"
         else:
-            workers_yaml = "\n".join(
+            entries_yaml = "\n".join(
                 f'      - name: "{w["name"]}"\n        agent: "{w["agent"]}"' for w in workers
             )
+            # blackboard calls its entries "contributors"; the other two call
+            # them "workers" — same WorkerSpec shape either way.
+            list_key = "contributors" if architecture == "blackboard" else "workers"
             section = (
                 "\norchestration:\n"
-                "  architecture: \"hierarchical_n_worker\"\n"
-                "  hierarchical_n_worker:\n"
-                "    workers:\n"
-                f"{workers_yaml}\n"
+                f'  architecture: "{architecture}"\n'
+                f"  {architecture}:\n"
+                f"    {list_key}:\n"
+                f"{entries_yaml}\n"
             )
         with config_path.open("a", encoding="utf-8") as handle:
             handle.write(section)
