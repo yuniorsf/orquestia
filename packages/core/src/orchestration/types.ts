@@ -35,12 +35,22 @@ export interface HierarchicalNWorkerConfig {
   readonly workers: readonly WorkerSpec[];
 }
 
+export interface HandoffSwarmConfig {
+  readonly workers: readonly WorkerSpec[];
+}
+
+export interface BlackboardConfig {
+  readonly contributors: readonly WorkerSpec[];
+}
+
 export type OrchestrationConfig =
   | { readonly architecture: 'fixed_tri_planar' }
   | {
       readonly architecture: 'hierarchical_n_worker';
       readonly hierarchicalNWorker: HierarchicalNWorkerConfig;
-    };
+    }
+  | { readonly architecture: 'handoff_swarm'; readonly handoffSwarm: HandoffSwarmConfig }
+  | { readonly architecture: 'blackboard'; readonly blackboard: BlackboardConfig };
 
 export class InvalidOrchestrationConfigError extends Error {
   constructor(message: string) {

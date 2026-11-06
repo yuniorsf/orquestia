@@ -26,14 +26,26 @@ export function parseOrchestrationConfig(
       section.hierarchical_n_worker,
       'orchestration.hierarchical_n_worker',
     );
-    const workersRaw = hnwRaw.workers;
-    if (!Array.isArray(workersRaw) || workersRaw.length === 0) {
-      throw new InvalidOrchestrationConfigError(
-        '"orchestration.hierarchical_n_worker.workers" must be a non-empty list.',
-      );
-    }
-    const workers = workersRaw.map((entry, index) => parseWorkerSpec(entry, index));
+    const workers = parseWorkerSpecList(
+      hnwRaw.workers,
+      'orchestration.hierarchical_n_worker.workers',
+    );
     return { architecture, hierarchicalNWorker: { workers } };
+  }
+
+  if (architecture === 'handoff_swarm') {
+    const handoffRaw = requireMapping(section.handoff_swarm, 'orchestration.handoff_swarm');
+    const workers = parseWorkerSpecList(handoffRaw.workers, 'orchestration.handoff_swarm.workers');
+    return { architecture, handoffSwarm: { workers } };
+  }
+
+  if (architecture === 'blackboard') {
+    const blackboardRaw = requireMapping(section.blackboard, 'orchestration.blackboard');
+    const contributors = parseWorkerSpecList(
+      blackboardRaw.contributors,
+      'orchestration.blackboard.contributors',
+    );
+    return { architecture, blackboard: { contributors } };
   }
 
   throw new InvalidOrchestrationConfigError(
@@ -41,8 +53,14 @@ export function parseOrchestrationConfig(
   );
 }
 
-function parseWorkerSpec(value: unknown, index: number): WorkerSpec {
-  const path = `orchestration.hierarchical_n_worker.workers[${index}]`;
+function parseWorkerSpecList(value: unknown, path: string): readonly WorkerSpec[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new InvalidOrchestrationConfigError(`"${path}" must be a non-empty list.`);
+  }
+  return value.map((entry, index) => parseWorkerSpec(entry, `${path}[${index}]`));
+}
+
+function parseWorkerSpec(value: unknown, path: string): WorkerSpec {
   const entry = requireMapping(value, path);
   return {
     name: requireString(entry.name, `${path}.name`),

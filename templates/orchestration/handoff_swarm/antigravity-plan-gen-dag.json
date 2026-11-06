@@ -1,0 +1,58 @@
+{
+  "$schema": "https://antigravity.google/schemas/workflow-dag-v1.json",
+  "workflowId": "handoff-swarm-plan-gen-dag",
+  "name": "Language-Agnostic Handoff/Swarm Planning & Architecture Verification DAG",
+  "version": "1.0.0",
+  "description": "Declarative read-only Outer-Loop planning blueprint for Google Antigravity coordinating the workers configured in orquestia.config.yaml's orchestration.handoff_swarm.workers[], dispatched strictly in sequence, with a Deterministic Plan Oracle and zero repository mutations.",
+  "metadata": {
+    "targetStack": "Language-Agnostic (configured via .harness/harness.env and harness.config.json)",
+    "architectureModel": "Handoff/Swarm Dual-Loop Read-Only Planning with Deterministic Plan Oracle",
+    "repositoryRoot": ".",
+    "baselineBranch": "origin/develop",
+    "mutationPolicy": "READ_ONLY_ZERO_REPO_CHANGES",
+    "handoffTargetWorkflow": "handoff-swarm-code-gen-dag",
+    "workerCount": {{WORKER_COUNT}}
+  },
+  "agents": {
+    "orchestrator": {
+      "id": "google-antigravity",
+      "plane": "ControlPlane-OuterLoop",
+      "executionPermissions": "read_only_repo_plus_conversation_artifact",
+      "contracts": ["AGENTS.md", "CLAUDE.md", ".antigravity/workflows/code-gen-dag.json"]
+    },
+    "workers": {{WORKERS_JSON}}
+  },
+  "planOracleSubstrate": {
+    "harnessEnv": "./.harness/harness.env",
+    "harnessConfig": "./harness.config.json",
+    "statusCodeMap": {
+      "0": "PASS_PLAN_VERIFIED",
+      "2": "FATAL_REPO_MUTATION_DETECTED",
+      "10": "FAIL_STAGE_1_PATH_EXISTENCE_OR_DISJOINT_OWNERSHIP",
+      "20": "FAIL_STAGE_2_BANNED_API_OR_SUPPRESSION_GUARDRAIL",
+      "30": "FAIL_STAGE_3_CLEAN_ARCHITECTURE_SOLID_OR_COVERAGE_GAP"
+    }
+  },
+  "parameters": {
+    "taskId": {
+      "type": "string",
+      "required": true,
+      "pattern": "^[a-zA-Z0-9._-]+$"
+    },
+    "baseRef": {
+      "type": "string",
+      "default": "origin/develop",
+      "forbiddenValues": ["main", "origin/main", "master", "origin/master"]
+    },
+    "maxSelfHealRetries": {
+      "type": "integer",
+      "default": 3,
+      "minimum": 1,
+      "maximum": 5
+    },
+    "outputPath": {
+      "type": "string",
+      "required": false
+    }
+  }
+}
