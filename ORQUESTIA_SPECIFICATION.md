@@ -70,6 +70,8 @@ Orquestia is structured around a decoupled, layered micro-kernel architecture wi
 └──────────────────────────┘ └───────────────────────┘
 ```
 
+> The diagram above (and §3 below) describes the **default** DAG topology — fixed 2A/2B branch roles. This is one of four implemented, config-selectable orchestration architectures (`orchestration.architecture` in `orquestia.config.yaml`); see §9 and `packages/core/src/orchestration/` for the others (`hierarchical_n_worker`, `handoff_swarm`, `blackboard`).
+
 ---
 
 ## 3. Core Functional Subsystems
@@ -410,15 +412,23 @@ load_balancing:
   global_enabled: true
   cooldown_on_429_seconds: 300
 
+# Matches the real parser shipped in packages/core/src/load-balancer/
+# layer-pools-config.ts exactly: "providers" (not "pool"), and a BOOLEAN
+# "primary_fallback" — required on every layer, including disabled ones.
+# (An earlier revision of this example used "pool" and a string
+# primary_fallback value; that shape predates the real parser and would
+# fail validation if used verbatim.)
 layers:
   # Layer 1: Planning Architecture & Deep Domain Reasoning (Phase 2A)
   planning_architecture:
     enabled: true
-    strategy: "quota_aware" # 'quota_aware' | 'round_robin' | 'least_cost' | 'latency'
-    primary_fallback: "claude_pro_account_1"
-    pool:
+    strategy: "quota_aware" # 'quota_aware' | 'round_robin' | 'least_cost' | 'latency_priority'
+    primary_fallback: true
+    providers:
       - name: "claude_pro_account_1"
         provider: "claude_code"
+        base_url: "n/a" # CLI-invoked, not an HTTP endpoint — base_url/model are still required by the parser
+        model: "claude-sonnet"
         weight: 60
       - name: "deepseek_r1_cloud"
         provider: "openai_compatible"
@@ -430,8 +440,8 @@ layers:
   coding_scaffolding_tests:
     enabled: true
     strategy: "least_cost" # Prefers local Ollama; spills to Mistral Codestral
-    primary_fallback: "copilot_cli"
-    pool:
+    primary_fallback: true
+    providers:
       - name: "local_qwen_coder"
         provider: "ollama"
         base_url: "http://localhost:11434/v1"
@@ -444,26 +454,33 @@ layers:
         priority: 2
       - name: "copilot_cli"
         provider: "github_copilot"
+        base_url: "n/a"
+        model: "copilot"
         priority: 3
 
   # Layer 3: Code Review & Jira Audit (Phase 3)
   code_review_qa:
-    enabled: false # Direct passthrough
-    direct_agent: "chatgpt_pro"
-    model: "gpt-4o"
-    pool: []
+    enabled: false # Disabled layers still need a syntactically valid strategy/primary_fallback/providers
+    strategy: "quota_aware"
+    primary_fallback: false
+    providers: []
 
   # Layer 4: Self-Healing Compile, Lint & Invariant Retries (Phase 4)
   self_healing_retries:
     enabled: true
     strategy: "latency_priority" # Sub-second fixes for rapid compilation feedback
-    pool:
+    primary_fallback: true
+    providers:
       - name: "groq_fast_llama"
         provider: "groq"
+        base_url: "https://api.groq.com/openai/v1"
         model: "llama-3.3-70b-versatile" # 300+ tokens/sec
+        priority: 1
       - name: "local_small_qwen"
         provider: "ollama"
+        base_url: "http://localhost:11434/v1"
         model: "qwen2.5-coder:7b"
+        priority: 2
 
 # ==============================================================================
 # 6. STACK DEFINITION & DETERMINISTIC COMMANDS
@@ -538,6 +555,30 @@ coding_dag:
     reverify_post_rebase: true
     commit_convention: "conventional_commits_with_jira"
     sync_jira_status: true
+
+# ==============================================================================
+# 9. ORCHESTRATION ARCHITECTURE (pluggable DAG topology — implemented)
+# ==============================================================================
+# Selects the shape of the DAG itself: how many workers, how they're
+# dispatched and joined — orthogonal to the model-routing "layers:" above,
+# which only selects which model backs an already-fixed phase. Four
+# architectures are implemented (packages/core/src/orchestration/):
+# fixed_tri_planar (the 2A/2B shape this document otherwise assumes
+# throughout §§1-3), hierarchical_n_worker (open worker list, parallel
+# fan-out + join), handoff_swarm (open worker list, sequential handoff,
+# no join barrier), and blackboard (open contributor list, shared
+# workspace, no disjoint ownership — conflicts resolved by last-writer-
+# wins). scripts/init-orchestration.sh regenerates CLAUDE.md,
+# .github/copilot-instructions.md, the code-gen-dag/plan-gen-dag skill
+# mirrors, and .antigravity/workflows/* to match whichever architecture
+# is selected here; see the root README's "Switching Orchestration
+# Architectures".
+orchestration:
+  architecture: "fixed_tri_planar"
+  # hierarchical_n_worker / handoff_swarm / blackboard each require their
+  # own sub-section (workers[] or contributors[]) — see
+  # packages/core/src/orchestration/orchestration-config.ts for the exact
+  # schema, or run `./scripts/init-orchestration.sh --help`.
 ```
 
 ---

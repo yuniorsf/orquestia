@@ -13,8 +13,12 @@ const GOVERNANCE_FILES = [
   '.github/copilot-instructions.md',
   '.claude/skills/code-gen-dag/SKILL.md',
   '.github/skills/code-gen-dag/SKILL.md',
+  '.agents/skills/code-gen-dag/SKILL.md',
+  '.claude/commands/code-gen-dag.md',
   '.claude/skills/plan-gen-dag/SKILL.md',
   '.github/skills/plan-gen-dag/SKILL.md',
+  '.agents/skills/plan-gen-dag/SKILL.md',
+  '.claude/commands/plan-gen-dag.md',
   '.antigravity/workflows/code-gen-dag.md',
   '.antigravity/workflows/plan-gen-dag.md',
   '.antigravity/workflows/code-gen-dag.json',
@@ -80,18 +84,26 @@ describe('scripts/init-orchestration.sh — hierarchical_n_worker', () => {
     );
     expect(copilotInstructions).toContain('Currently: **contracts**');
 
-    for (const skillPath of [
-      '.claude/skills/code-gen-dag/SKILL.md',
-      '.github/skills/code-gen-dag/SKILL.md',
-      '.claude/skills/plan-gen-dag/SKILL.md',
-      '.github/skills/plan-gen-dag/SKILL.md',
+    for (const mirrorPaths of [
+      [
+        '.claude/skills/code-gen-dag/SKILL.md',
+        '.github/skills/code-gen-dag/SKILL.md',
+        '.agents/skills/code-gen-dag/SKILL.md',
+        '.claude/commands/code-gen-dag.md',
+      ],
+      [
+        '.claude/skills/plan-gen-dag/SKILL.md',
+        '.github/skills/plan-gen-dag/SKILL.md',
+        '.agents/skills/plan-gen-dag/SKILL.md',
+        '.claude/commands/plan-gen-dag.md',
+      ],
     ]) {
-      const claudeVariant = await readFile(join(scratchDir, skillPath), 'utf8');
-      const githubVariant = await readFile(
-        join(scratchDir, skillPath.replace('.claude', '.github')),
-        'utf8',
-      );
-      expect(claudeVariant).toBe(githubVariant);
+      const [first, ...rest] = mirrorPaths;
+      const firstContent = await readFile(join(scratchDir, first as string), 'utf8');
+      for (const mirrorPath of rest) {
+        const mirrorContent = await readFile(join(scratchDir, mirrorPath), 'utf8');
+        expect(mirrorContent, `${mirrorPath} should mirror ${first}`).toBe(firstContent);
+      }
     }
 
     const codeGenDagJson = JSON.parse(

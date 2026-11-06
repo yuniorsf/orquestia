@@ -1,7 +1,7 @@
 {
   "name": "orquestia",
   "displayName": "Orquestia",
-  "description": "Kanban board, live worktree diff previews, and one-click Plan/Code DAG execution for the Orquestia Tri-Planar multi-agent orchestrator.",
+  "description": "Kanban board, live worktree diff previews, and one-click Plan/Code DAG execution for the Orquestia multi-agent orchestrator.",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
