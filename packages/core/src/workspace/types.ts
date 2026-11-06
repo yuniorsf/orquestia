@@ -51,3 +51,19 @@ export class UnknownWorktreeSlotError extends Error {
     this.name = 'UnknownWorktreeSlotError';
   }
 }
+
+export interface WorktreeFileDiff {
+  readonly path: string;
+  readonly insertions: number;
+  readonly deletions: number;
+}
+
+export interface WorktreeDiffSummary {
+  readonly worktreePath: string;
+  readonly files: readonly WorktreeFileDiff[];
+}
+
+/** Summarizes the uncommitted (and committed-but-unmerged) changes in an active worktree, for live diff previews. */
+export interface WorktreeDiffPort {
+  summarize(worktreePath: string): Promise<WorktreeDiffSummary>;
+}

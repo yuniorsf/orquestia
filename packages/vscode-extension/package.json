@@ -1,0 +1,37 @@
+{
+  "name": "@orquestia/vscode-extension",
+  "displayName": "Orquestia",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/extension.js",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "orquestia.openKanbanBoard",
+        "title": "Orquestia: Open Kanban Board"
+      },
+      {
+        "command": "orquestia.showWorktreeDiff",
+        "title": "Orquestia: Show Worktree Diff Preview"
+      }
+    ]
+  },
+  "activationEvents": [
+    "onCommand:orquestia.openKanbanBoard",
+    "onCommand:orquestia.showWorktreeDiff"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:bundle": "npm run build && node dist-tsc/run-bundle.js"
+  },
+  "dependencies": {
+    "@orquestia/core": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.21.5"
+  }
+}
