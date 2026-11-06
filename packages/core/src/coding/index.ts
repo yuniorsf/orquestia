@@ -7,3 +7,11 @@ export { CodingSelfHealingService } from './coding-self-healing-service.js';
 export { ShellCommandRunner } from './shell-command-runner.js';
 export { RebaseAndReverifyService } from './rebase-and-reverify-service.js';
 export { ShipService } from './ship-service.js';
+export {
+  FsFileWriter,
+  MalformedSynthesisOutputError,
+  type FileWriterPort,
+  type SynthesizedFile,
+} from './synthesis-json-protocol.js';
+export { AgentCodeSynthesisDispatcher } from './agent-code-synthesis-dispatcher.js';
+export { AgentCodingRemediationDispatcher } from './agent-coding-remediation-dispatcher.js';
