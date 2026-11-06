@@ -19,3 +19,32 @@ export interface OrchestrationTopologyPort {
   readonly architecture: string;
   dispatch(): Promise<OrchestrationResult>;
 }
+
+/** One entry of `orchestration.hierarchical_n_worker.workers[]`. */
+export interface WorkerSpec {
+  readonly name: string;
+  readonly agent: string;
+}
+
+/** Dispatches a single named worker; the real adapter routes through `AgentRouter` by `worker.agent`. */
+export interface WorkerDispatcherPort {
+  dispatch(worker: WorkerSpec): Promise<SpecialistOutput>;
+}
+
+export interface HierarchicalNWorkerConfig {
+  readonly workers: readonly WorkerSpec[];
+}
+
+export type OrchestrationConfig =
+  | { readonly architecture: 'fixed_tri_planar' }
+  | {
+      readonly architecture: 'hierarchical_n_worker';
+      readonly hierarchicalNWorker: HierarchicalNWorkerConfig;
+    };
+
+export class InvalidOrchestrationConfigError extends Error {
+  constructor(message: string) {
+    super(`Invalid "orchestration" config section in orquestia.config.yaml: ${message}`);
+    this.name = 'InvalidOrchestrationConfigError';
+  }
+}
