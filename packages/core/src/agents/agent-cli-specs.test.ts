@@ -30,9 +30,18 @@ describe('copilotCliSpec', () => {
 });
 
 describe('antigravityCliSpec', () => {
-  it('names the antigravity executable and follows the shared -p prompt convention', () => {
+  it('keeps the logical agent name "antigravity" but points at the real agy binary', () => {
     expect(antigravityCliSpec.name).toBe('antigravity');
-    expect(antigravityCliSpec.executable).toBe('antigravity');
-    expect(antigravityCliSpec.buildArgs(request)).toEqual(['-p', request.prompt]);
+    expect(antigravityCliSpec.executable).toBe('agy');
+  });
+
+  it('passes the prompt via -p plus --mode plan --dangerously-skip-permissions', () => {
+    expect(antigravityCliSpec.buildArgs(request)).toEqual([
+      '-p',
+      request.prompt,
+      '--mode',
+      'plan',
+      '--dangerously-skip-permissions',
+    ]);
   });
 });

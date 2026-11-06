@@ -26,13 +26,25 @@ export const copilotCliSpec: AgentCliSpec = {
 };
 
 /**
- * Google Antigravity has no publicly documented headless CLI contract at
- * time of writing; this spec follows the same `-p "<prompt>"` convention
- * shared by {@link claudeCodeCliSpec}/{@link copilotCliSpec} and is the
- * override point (`AgentCliSpec.buildArgs`) once Antigravity ships one.
+ * `agy -p "<prompt>" --mode plan --dangerously-skip-permissions`, run with
+ * the process `cwd` set to the task worktree. `agy` is Google Antigravity's
+ * real headless CLI binary (confirmed via `agy --help`); `antigravity` only
+ * launches the desktop editor. `--mode plan` structurally prevents it from
+ * editing files at all — consistent with every other agent here, since
+ * Orquestia never lets an agent write via its own tools; it always parses
+ * the agent's JSON response and writes the files itself.
+ * `--dangerously-skip-permissions` is still required alongside `--mode
+ * plan`: a headless `-p` run has no TTY to answer a permission prompt for
+ * whatever read-only tool calls (e.g. reading a file) plan mode does allow,
+ * so without it such a call would hang forever instead of being denied.
  */
 export const antigravityCliSpec: AgentCliSpec = {
   name: 'antigravity',
-  executable: 'antigravity',
-  buildArgs: promptArgs,
+  executable: 'agy',
+  buildArgs: (request) => [
+    ...promptArgs(request),
+    '--mode',
+    'plan',
+    '--dangerously-skip-permissions',
+  ],
 };
