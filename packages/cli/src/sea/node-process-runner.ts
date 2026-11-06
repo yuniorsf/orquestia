@@ -5,9 +5,16 @@ import type { ProcessResult, ProcessRunner } from './types.js';
 const execFileAsync = promisify(execFile);
 
 interface ExecError {
+  // `code` genuinely varies: a real non-zero exit gives a number, ENOENT
+  // (executable not found) gives the string "ENOENT", and a signal kill
+  // (e.g. a timeout) gives null.
   readonly code?: number | string | null;
-  readonly stdout?: string;
-  readonly stderr?: string;
+  // Empirically, every child_process.execFile-family error — ENOENT,
+  // timeout/killed, and a real non-zero exit — carries `stdout`/`stderr`
+  // as defined strings (verified directly against this Node version, not
+  // just vitest's test environment), so these are never optional here.
+  readonly stdout: string;
+  readonly stderr: string;
 }
 
 /** Real `child_process.execFile`-backed {@link ProcessRunner} for SEA build steps. */
@@ -22,15 +29,7 @@ export class NodeProcessRunner implements ProcessRunner {
       if (typeof execError.code === 'number') {
         exitCode = execError.code;
       }
-      let stdout = '';
-      if (typeof execError.stdout === 'string') {
-        stdout = execError.stdout;
-      }
-      let stderr = '';
-      if (typeof execError.stderr === 'string') {
-        stderr = execError.stderr;
-      }
-      return { exitCode, stdout, stderr };
+      return { exitCode, stdout: execError.stdout, stderr: execError.stderr };
     }
   }
 }
