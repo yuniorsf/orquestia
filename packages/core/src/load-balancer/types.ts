@@ -18,6 +18,8 @@ export interface LayerConfig {
   readonly name: string;
   readonly enabled: boolean;
   readonly strategy: ProviderStrategyName;
+  /** Whether a failed provider call should retry the next entry in `providers` (priority order) rather than fail immediately. */
+  readonly primaryFallback: boolean;
   readonly providers: readonly ProviderEntry[];
 }
 
@@ -60,5 +62,12 @@ export class UnknownStrategyError extends Error {
   constructor(strategy: string) {
     super(`Unknown provider strategy "${strategy}".`);
     this.name = 'UnknownStrategyError';
+  }
+}
+
+export class InvalidLayerPoolsConfigError extends Error {
+  constructor(message: string) {
+    super(`Invalid "layers" config section in orquestia.config.yaml: ${message}`);
+    this.name = 'InvalidLayerPoolsConfigError';
   }
 }

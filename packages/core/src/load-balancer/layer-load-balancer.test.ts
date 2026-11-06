@@ -27,6 +27,7 @@ describe('LayerLoadBalancer', () => {
       name: 'planning_architecture',
       enabled: true,
       strategy: 'round_robin',
+      primaryFallback: false,
       providers: [PROVIDER],
     };
     const router = new FakeStrategyRouter({ layer: 'planning_architecture', provider: PROVIDER });
@@ -52,6 +53,7 @@ describe('LayerLoadBalancer', () => {
       name: 'self_healing_retries',
       enabled: false,
       strategy: 'round_robin',
+      primaryFallback: false,
       providers: [PROVIDER],
     };
     const balancer = new LayerLoadBalancer(
