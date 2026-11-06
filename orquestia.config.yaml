@@ -219,3 +219,15 @@ plan_oracle:
   guardrail_patterns:
     - pattern: 'eslint-disable|@ts-ignore|@ts-nocheck'
       message: 'Linter/typechecker suppression is prohibited (CLAUDE.md §1.3).'
+
+# ==============================================================================
+# 10. ORCHESTRATION ARCHITECTURE
+# ==============================================================================
+# Selects the DAG topology itself — not yet wired into main.ts's command
+# construction, but drives `scripts/init-orchestration.sh`, which
+# regenerates CLAUDE.md / .github/copilot-instructions.md / the
+# code-gen-dag & plan-gen-dag skills / .antigravity/workflows/* to match
+# whichever architecture is selected here. See README's "Switching
+# Orchestration Architectures" section.
+orchestration:
+  architecture: 'fixed_tri_planar'

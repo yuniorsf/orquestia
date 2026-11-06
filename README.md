@@ -110,3 +110,17 @@ npm run build:vsix --workspace=orquestia
 ```
 
 Produces `packages/vscode-extension/dist/orquestia.vsix`, installable via `code --install-extension packages/vscode-extension/dist/orquestia.vsix`.
+
+### Switching Orchestration Architectures
+
+`orquestia.config.yaml`'s `orchestration.architecture` selects the DAG topology — currently `fixed_tri_planar` (the default: fixed Claude Code / GitHub Copilot 2A/2B roles) or `hierarchical_n_worker` (an open, config-declared worker list). Switching architectures regenerates every governance file that describes the topology to Claude Code, GitHub Copilot, and Google Antigravity — `CLAUDE.md`, `.github/copilot-instructions.md`, the `code-gen-dag`/`plan-gen-dag` skills on both planes, and `.antigravity/workflows/*`:
+
+```bash
+# Default — regenerates today's fixed 2A/2B files (byte-identical; no worker args)
+./scripts/init-orchestration.sh fixed_tri_planar
+
+# Open worker list — one or more "name:agent" pairs
+./scripts/init-orchestration.sh hierarchical_n_worker "architecture:claude_code" "contracts:copilot_cli"
+```
+
+The generator also appends `orquestia.config.yaml`'s `orchestration:` section the first time it's run (it won't overwrite one that already exists — remove it manually first to switch). **Generated files are starting points**: customize them or replace them entirely once generated. Blackboard and handoff/swarm topologies are tracked separately (not yet implemented — see `ORQ-38`).
