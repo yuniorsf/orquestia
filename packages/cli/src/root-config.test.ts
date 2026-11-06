@@ -3,6 +3,7 @@ import {
   parseAtlassianAlmConfig,
   parseCondenserConfig,
   parseLayerPoolsConfig,
+  parseOrchestrationConfig,
   YamlConfigReader,
 } from '@orquestia/core';
 import { describe, expect, it } from 'vitest';
@@ -39,5 +40,11 @@ describe('orquestia.config.yaml (repo root)', () => {
     const config = await new YamlConfigReader(ROOT_CONFIG_PATH).loadConfig();
 
     expect(() => parseLayerPoolsConfig(config.raw)).not.toThrow();
+  });
+
+  it('its orchestration section parses against the real parser, selecting fixed_tri_planar', async () => {
+    const config = await new YamlConfigReader(ROOT_CONFIG_PATH).loadConfig();
+
+    expect(parseOrchestrationConfig(config.raw)).toEqual({ architecture: 'fixed_tri_planar' });
   });
 });
