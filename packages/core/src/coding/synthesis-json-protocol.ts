@@ -1,6 +1,7 @@
 import { dirname, join } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import type { FileManifestEntry, SpecialistBranch } from '../planning/types.js';
+import { extractJsonObject } from '../shared/json-response-extractor.js';
 
 export class MalformedSynthesisOutputError extends Error {
   constructor(branch: SpecialistBranch, reason: string) {
@@ -33,25 +34,6 @@ interface RawSynthesizedFile {
 
 interface RawSynthesisOutput {
   readonly files?: readonly RawSynthesizedFile[];
-}
-
-/**
- * Models reliably ignore "no commentary" at least some of the time —
- * extracts the substring between the first `{` and the last `}` (after
- * stripping a ```json fence, if any), so prose wrapped around the JSON
- * object doesn't break parsing.
- */
-function extractJsonObject(text: string): string {
-  const trimmed = text.trim();
-  const fenced = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(trimmed);
-  const candidate = fenced ? (fenced[1] as string) : trimmed;
-
-  const firstBrace = candidate.indexOf('{');
-  const lastBrace = candidate.lastIndexOf('}');
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
-    return candidate;
-  }
-  return candidate.slice(firstBrace, lastBrace + 1);
 }
 
 /**

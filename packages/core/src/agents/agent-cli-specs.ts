@@ -11,11 +11,18 @@ export const claudeCodeCliSpec: AgentCliSpec = {
   buildArgs: promptArgs,
 };
 
-/** `copilot -p "<prompt>" --allow-all-tools`, run with the process `cwd` set to the task worktree. */
+/**
+ * `copilot -p "<prompt>" --allow-all-tools --silent`, run with the process
+ * `cwd` set to the task worktree. `--silent` ("Output only the agent
+ * response (no stats), useful for scripting with -p" per `copilot --help`)
+ * keeps Copilot's own tool-call transcript and session-summary footer out
+ * of stdout, so they can't be mistaken for part of the JSON answer this
+ * protocol expects (see `extractJsonObject` in `../shared/json-response-extractor.js`).
+ */
 export const copilotCliSpec: AgentCliSpec = {
   name: 'copilot_cli',
   executable: 'copilot',
-  buildArgs: (request) => [...promptArgs(request), '--allow-all-tools'],
+  buildArgs: (request) => [...promptArgs(request), '--allow-all-tools', '--silent'],
 };
 
 /**

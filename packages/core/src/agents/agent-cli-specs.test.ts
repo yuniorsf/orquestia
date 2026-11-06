@@ -17,10 +17,15 @@ describe('claudeCodeCliSpec', () => {
 });
 
 describe('copilotCliSpec', () => {
-  it('names the copilot executable and passes the prompt plus --allow-all-tools', () => {
+  it('names the copilot executable and passes the prompt plus --allow-all-tools --silent', () => {
     expect(copilotCliSpec.name).toBe('copilot_cli');
     expect(copilotCliSpec.executable).toBe('copilot');
-    expect(copilotCliSpec.buildArgs(request)).toEqual(['-p', request.prompt, '--allow-all-tools']);
+    expect(copilotCliSpec.buildArgs(request)).toEqual([
+      '-p',
+      request.prompt,
+      '--allow-all-tools',
+      '--silent',
+    ]);
   });
 });
 

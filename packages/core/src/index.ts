@@ -12,6 +12,7 @@ export * from './planning/index.js';
 export * from './queue/index.js';
 export * from './rate-limit/index.js';
 export * from './shared/clock.js';
+export * from './shared/json-response-extractor.js';
 export * from './shared/token-generator.js';
 export * from './vault/index.js';
 export * from './workspace/index.js';

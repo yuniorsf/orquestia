@@ -29,6 +29,19 @@ describe('parseSynthesisOutput', () => {
     expect(files).toEqual([{ path: 'a.ts', content: 'x' }]);
   });
 
+  it('extracts the JSON object past tool-call transcript noise containing its own braces', () => {
+    const files = parseSynthesisOutput(
+      '2B',
+      [
+        "$ Shell cat config.ts && echo '{ not: json }'",
+        '{ not: json }',
+        '{"files":[{"path":"a.ts","content":"export const x = { nested: true };"}]}',
+      ].join('\n'),
+    );
+
+    expect(files).toEqual([{ path: 'a.ts', content: 'export const x = { nested: true };' }]);
+  });
+
   it('strips a ```json markdown fence before parsing', () => {
     const files = parseSynthesisOutput('2B', '```json\n{"files":[]}\n```');
 
