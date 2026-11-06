@@ -236,6 +236,91 @@ def verify_scopes(
     return findings
 
 
+def verify_worker_scopes(
+    changed_files: list[str],
+    worker_scopes: dict[str, list[str]],
+    allowed_scope: list[str],
+) -> list[Finding]:
+    """Generalizes `verify_scopes`'s pairwise-disjointness + full-coverage check
+    from the fixed Branch 2A/2B pair to an arbitrary named worker count, for
+    orchestration architectures with more than two workers (e.g.
+    `hierarchical_n_worker`). `--scope-a`/`--scope-b` remain the dedicated,
+    unchanged path for the default `fixed_tri_planar` architecture."""
+    findings: list[Finding] = []
+    names = sorted(worker_scopes.keys())
+
+    if len(names) >= 2:
+        for i, name_i in enumerate(names):
+            for name_j in names[i + 1 :]:
+                overlap = sorted(set(worker_scopes[name_i]) & set(worker_scopes[name_j]))
+                for item in overlap:
+                    findings.append(
+                        Finding(
+                            code=10,
+                            severity="ERROR",
+                            principle="SCOPE",
+                            file=item,
+                            line=1,
+                            message=f"Monoidal disjointness violated ({name_i} ∩ {name_j} ≠ ∅): '{item}' appears in both worker scopes.",
+                        )
+                    )
+
+        for rel in changed_files:
+            owners = [name for name in names if matches_any_pattern(rel, worker_scopes[name])]
+            if len(owners) > 1:
+                findings.append(
+                    Finding(
+                        code=10,
+                        severity="ERROR",
+                        principle="SCOPE",
+                        file=rel,
+                        line=1,
+                        message=f"File matches more than one worker's ownership pattern ({', '.join(owners)}); disjoint ownership violated.",
+                    )
+                )
+            elif len(owners) == 0:
+                findings.append(
+                    Finding(
+                        code=10,
+                        severity="ERROR",
+                        principle="SCOPE",
+                        file=rel,
+                        line=1,
+                        message="SRP mutation scope violated: modified file is outside every configured worker's assigned scope.",
+                    )
+                )
+
+    if allowed_scope:
+        for rel in changed_files:
+            if not matches_any_pattern(rel, allowed_scope):
+                findings.append(
+                    Finding(
+                        code=10,
+                        severity="ERROR",
+                        principle="SCOPE",
+                        file=rel,
+                        line=1,
+                        message="SRP mutation scope violated: modified file lies outside agent's allowed bounded scope.",
+                    )
+                )
+    return findings
+
+
+def parse_worker_scopes(raw_values: list[str] | None) -> dict[str, list[str]]:
+    """Parses repeated `--worker-scope name:glob1,glob2` arguments into
+    `{name: [glob1, glob2]}`."""
+    result: dict[str, list[str]] = {}
+    if not raw_values:
+        return result
+    for item in raw_values:
+        name, _, csv_patterns = item.partition(":")
+        name = name.strip()
+        if not name:
+            continue
+        result[name] = parse_csv_patterns([csv_patterns])
+    return result
+
+
 def verify_paired_files(target_dir: Path, rel_path: str, rules: list[dict[str, Any]]) -> list[Finding]:
     norm = rel_path.replace("\\", "/")
     findings: list[Finding] = []
@@ -541,6 +626,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base", default=None, help="Optional git base ref (e.g., origin/develop) to include branch diffs.")
     parser.add_argument("--scope-a", action="append", help="Comma-separated path prefixes/globs owned by Branch 2A (Claude Code).")
     parser.add_argument("--scope-b", action="append", help="Comma-separated path prefixes/globs owned by Branch 2B (GitHub Copilot).")
+    parser.add_argument("--worker-scope", action="append", help="Repeatable 'name:comma-separated-globs' for orchestration architectures with more than two named workers (e.g. hierarchical_n_worker). Takes precedence over --scope-a/--scope-b when provided.")
     parser.add_argument("--allowed-scope", action="append", help="Comma-separated path prefixes/globs permitted for a single agent node.")
     parser.add_argument("--max-interface-methods", type=int, default=None, help="Override ISP advisory threshold for methods per interface.")
     parser.add_argument("--max-public-methods", type=int, default=None, help="Override SRP advisory threshold for public methods per class.")
@@ -575,9 +661,13 @@ def main() -> int:
     scope_a = parse_csv_patterns(args.scope_a)
     scope_b = parse_csv_patterns(args.scope_b)
     allowed_scope = parse_csv_patterns(args.allowed_scope)
+    worker_scopes = parse_worker_scopes(args.worker_scope)
 
     report = AuditReport(target=str(target_dir), checked_files=checked_files)
-    report.findings.extend(verify_scopes(checked_files, scope_a, scope_b, allowed_scope))
+    if worker_scopes:
+        report.findings.extend(verify_worker_scopes(checked_files, worker_scopes, allowed_scope))
+    else:
+        report.findings.extend(verify_scopes(checked_files, scope_a, scope_b, allowed_scope))
 
     paired_rules = arch_cfg.get("pairedFileRules", [])
     for rel in checked_files:
