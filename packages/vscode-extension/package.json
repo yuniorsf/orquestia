@@ -25,6 +25,10 @@
         "title": "Orquestia: Show Worktree Diff Preview"
       },
       {
+        "command": "orquestia.showConfigView",
+        "title": "Orquestia: Show Configuration"
+      },
+      {
         "command": "orquestia.runPlanDag",
         "title": "Orquestia: Run Plan DAG"
       },
@@ -37,6 +41,7 @@
   "activationEvents": [
     "onCommand:orquestia.openKanbanBoard",
     "onCommand:orquestia.showWorktreeDiff",
+    "onCommand:orquestia.showConfigView",
     "onCommand:orquestia.runPlanDag",
     "onCommand:orquestia.runCodeDag"
   ],
