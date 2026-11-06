@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Project Stack Initializer for MultiAgentTemplate
+# Project Stack Initializer
 # ==============================================================================
-# Configures `.harness/harness.env` and `harness.config.json` for a new project
-# cloned from MultiAgentTemplate.
+# Configures `.harness/harness.env` and `harness.config.json`. Orquestia is a
+# permanent TypeScript/Node project (see harness.config.json's "stack" field),
+# so the other-language profiles from the original multi-stack template
+# (python-uv/go/rust/dotnet) were removed as unused; this now only supports
+# re-generating the typescript-node profile or a fully manual "generic" one.
 #
 # Usage:
-#   ./scripts/init-project-stack.sh <typescript|python|go|rust|dotnet|generic> [ProjectName] [TICKET_PREFIX]
+#   ./scripts/init-project-stack.sh <typescript|generic> [ProjectName] [TICKET_PREFIX]
 # ==============================================================================
 
 set -euo pipefail
@@ -26,10 +29,6 @@ Usage: $(basename "$0") <stack> [ProjectName] [TICKET_PREFIX]
 
 Available stacks:
   typescript   -> .harness/profiles/typescript-node.env (Prettier + tsc + ESLint + Vitest/Jest)
-  python       -> .harness/profiles/python-uv.env       (uv + Ruff + Mypy --strict + Pytest)
-  go           -> .harness/profiles/go.env              (gofmt + go vet / golangci-lint + go test)
-  rust         -> .harness/profiles/rust.env            (cargo fmt + clippy -D warnings + cargo test)
-  dotnet       -> .harness/profiles/dotnet.env          (dotnet format + build /warnaserror + dotnet test)
   generic      -> Polyglot SOLID verifier defaults (customize .harness/harness.env manually)
 EOF
     exit 0
@@ -37,10 +36,6 @@ fi
 
 case "${STACK_ARG}" in
     ts|typescript|node|typescript-node) PROFILE_FILE="${PROFILES_DIR}/typescript-node.env"; STACK_ID="typescript-node" ;;
-    py|python|uv|python-uv)             PROFILE_FILE="${PROFILES_DIR}/python-uv.env";       STACK_ID="python-uv" ;;
-    go|golang)                          PROFILE_FILE="${PROFILES_DIR}/go.env";              STACK_ID="go" ;;
-    rs|rust|cargo)                      PROFILE_FILE="${PROFILES_DIR}/rust.env";            STACK_ID="rust" ;;
-    cs|csharp|dotnet|net)               PROFILE_FILE="${PROFILES_DIR}/dotnet.env";          STACK_ID="dotnet" ;;
     generic)                            PROFILE_FILE="";                                    STACK_ID="generic" ;;
     *)
         printf "\033[1;31m[INIT:ERROR]\033[0m Unknown stack '%s'. Run with --help to list supported stacks.\n" "${STACK_ARG}" >&2

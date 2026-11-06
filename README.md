@@ -95,7 +95,7 @@ Orquestia's own codebase is developed using the **Tri-Planar Dual-Loop Multi-Age
 Full operational reference: [`AI-AUGMENTED-DEVELOPMENT.md`](AI-AUGMENTED-DEVELOPMENT.md). Harness bootstrap:
 
 ```bash
-./scripts/init-project-stack.sh <typescript|python|go|rust|dotnet> <ProjectName> <TICKET_PREFIX>
+./scripts/init-project-stack.sh <typescript|generic> <ProjectName> <TICKET_PREFIX>
 python3 scripts/verify-solid-contracts.py --target .
 ./scripts/verify-agent-worktree.sh .
 ```
