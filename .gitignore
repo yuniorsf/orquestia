@@ -38,6 +38,8 @@ node_modules/
 .turbo/
 coverage/
 packages/cli/sea-config.json
+dist-tsc/
+*.vsix
 
 # Go / Rust / JVM / .NET
 bin/

@@ -18,6 +18,8 @@ export default defineConfig({
         'packages/cli/src/index.ts',
         'packages/cli/src/build-sea.ts',
         'packages/cli/src/sea-entry.ts',
+        'packages/vscode-extension/src/extension.ts',
+        'packages/vscode-extension/src/run-bundle.ts',
       ],
     },
   },

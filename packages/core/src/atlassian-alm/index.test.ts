@@ -17,5 +17,10 @@ describe('atlassian-alm public API', () => {
     expect(atlassianAlm.ConfiguredIssueTransitionService).toBeTypeOf('function');
     expect(atlassianAlm.HttpJiraStatusSyncPort).toBeTypeOf('function');
     expect(atlassianAlm.HttpConfluencePublisherPort).toBeTypeOf('function');
+    expect(atlassianAlm.HttpIssueBoardPort).toBeTypeOf('function');
+  });
+
+  it('exports the Kanban board grouping function', () => {
+    expect(atlassianAlm.groupIssuesIntoBoard).toBeTypeOf('function');
   });
 });

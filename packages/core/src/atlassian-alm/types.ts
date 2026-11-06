@@ -51,3 +51,14 @@ export class AlmHttpError extends Error {
     this.name = 'AlmHttpError';
   }
 }
+
+export interface BoardIssue {
+  readonly key: string;
+  readonly summary: string;
+  readonly status: string;
+}
+
+/** Lists the issues backing a Kanban board view for a Jira project. */
+export interface IssueBoardPort {
+  listIssues(projectKey: string): Promise<readonly BoardIssue[]>;
+}
