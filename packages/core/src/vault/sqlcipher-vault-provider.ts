@@ -129,6 +129,14 @@ export class SQLCipherVaultProvider implements IVaultProvider {
     db.prepare('DELETE FROM credentials WHERE key = ?').run(key);
   }
 
+  async listCredentialKeys(): Promise<readonly string[]> {
+    const db = this.getDb();
+    const rows = db.prepare('SELECT key FROM credentials ORDER BY key').all() as unknown as Array<{
+      key: string;
+    }>;
+    return rows.map((row) => row.key);
+  }
+
   async listSubscriptions(): Promise<readonly Subscription[]> {
     const db = this.getDb();
     const rows = db

@@ -3,11 +3,14 @@ import {
   AgentRouter,
   AgentSpecialistDispatcher,
   CliProcessAgentAdapter,
+  CryptoRandomBytesPort,
   DurableApprovalManager,
   FsFileExistencePort,
   GitStatusSnapshotter,
   JsonFileApprovalStateStore,
+  MacosKeychainKeyDerivationPort,
   RandomTokenGenerator,
+  SQLCipherVaultProvider,
   SystemClock,
   YamlConfigReader,
   claudeCodeCliSpec,
@@ -16,6 +19,7 @@ import {
   type ApprovalGateModes,
 } from '@orquestia/core';
 import { ApprovalsCommand } from './approvals-command.js';
+import { AuthCommand } from './auth-command.js';
 import { CodeCommand } from './code-command.js';
 import { buildCodeCommandDependencies } from './code-command-wiring.js';
 import { CommandRouter } from './command-router.js';
@@ -58,15 +62,24 @@ export function buildRouter(cwd: string): CommandRouter {
   );
   const codeCommand = new CodeCommand(buildCodeCommandDependencies(cwd, agentRouter));
 
+  // SQLCipher (local, embedded, zero external infra via Node's built-in
+  // node:sqlite) is the default vault backend; HashiCorpVaultProvider is
+  // a drop-in alternative behind the same CredentialStorePort (ORQ-18/19)
+  // for teams that want a shared enterprise vault instead.
+  const vaultProvider = new SQLCipherVaultProvider(
+    join(cwd, '.orquestia', 'vault.db'),
+    new MacosKeychainKeyDerivationPort(new CryptoRandomBytesPort()),
+    new CryptoRandomBytesPort(),
+    new SystemClock(),
+    new RandomTokenGenerator(),
+  );
+  const authCommand = new AuthCommand(vaultProvider);
+
   return new CommandRouter([
     new ApprovalsCommand(manager),
     planCommand,
     codeCommand,
-    new PendingCommand(
-      'auth',
-      'Authenticate with Atlassian (OAuth 2.0 + PKCE)',
-      'a concrete encrypted vault storage driver (SQLCipher/HashiCorp) not yet added as a dependency',
-    ),
+    authCommand,
     new PendingCommand(
       'queue',
       'Inspect the worktree task queue',

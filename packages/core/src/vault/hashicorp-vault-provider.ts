@@ -56,6 +56,10 @@ export class HashiCorpVaultProvider implements IVaultProvider {
     await this.deleteKv(`credentials/${key}`);
   }
 
+  async listCredentialKeys(): Promise<readonly string[]> {
+    return this.listKv('credentials');
+  }
+
   async listSubscriptions(): Promise<readonly Subscription[]> {
     const ids = await this.listKv('subscriptions');
     const subscriptions = await Promise.all(

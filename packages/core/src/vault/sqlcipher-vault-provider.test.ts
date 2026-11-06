@@ -55,6 +55,22 @@ describe('SQLCipherVaultProvider', () => {
       expect(await provider.getCredential('api-key')).toBeNull();
     });
 
+    it('lists stored credential keys in sorted order, excluding deleted ones', async () => {
+      const { provider } = createProvider();
+      await provider.setCredential('zebra', '1');
+      await provider.setCredential('alpha', '2');
+      await provider.setCredential('mango', '3');
+      await provider.deleteCredential('mango');
+
+      expect(await provider.listCredentialKeys()).toEqual(['alpha', 'zebra']);
+    });
+
+    it('returns an empty list when no credentials are stored', async () => {
+      const { provider } = createProvider();
+
+      expect(await provider.listCredentialKeys()).toEqual([]);
+    });
+
     it('derives the master key at most once across multiple operations', async () => {
       const { provider, keyDerivation } = createProvider();
 
