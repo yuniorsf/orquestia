@@ -7,6 +7,7 @@ export * from './context-condenser/index.js';
 export * from './daemon/index.js';
 export * from './load-balancer/index.js';
 export * from './openai-gateway/index.js';
+export * from './orchestration/index.js';
 export * from './planning/index.js';
 export * from './queue/index.js';
 export * from './rate-limit/index.js';
