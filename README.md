@@ -99,3 +99,14 @@ Full operational reference: [`AI-AUGMENTED-DEVELOPMENT.md`](AI-AUGMENTED-DEVELOP
 python3 scripts/verify-solid-contracts.py --target .
 ./scripts/verify-agent-worktree.sh .
 ```
+
+### Building the VS Code Extension (`.vsix`)
+
+`@orquestia/core` must be built first so the extension can resolve its type declarations:
+
+```bash
+npm run build --workspace=@orquestia/core
+npm run build:vsix --workspace=orquestia
+```
+
+Produces `packages/vscode-extension/dist/orquestia.vsix`, installable via `code --install-extension packages/vscode-extension/dist/orquestia.vsix`.
