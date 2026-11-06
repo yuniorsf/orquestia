@@ -11,9 +11,16 @@ import type {
 const execFileAsync = promisify(execFile);
 
 interface ExecError {
+  // `code` genuinely varies: a real non-zero exit gives a number, ENOENT
+  // (executable not found) gives the string "ENOENT", and a signal kill
+  // (e.g. a timeout) gives null.
   readonly code?: number | string | null;
-  readonly stdout?: string;
-  readonly stderr?: string;
+  // Empirically, every child_process.execFile-family error — ENOENT,
+  // timeout/killed, and a real non-zero exit — carries `stdout`/`stderr`
+  // as defined strings (verified directly against this Node version, not
+  // just vitest's test environment), so these are never optional here.
+  readonly stdout: string;
+  readonly stderr: string;
 }
 
 /**
@@ -39,22 +46,13 @@ export class CliProcessAgentAdapter implements AgentAdapterPort {
     } catch (error) {
       // node:child_process rejects with an Error carrying code/stdout/stderr.
       // `code` is a string (e.g. "ENOENT") when the executable itself could
-      // not be spawned, and stdout/stderr are left undefined in that case
-      // since the process never started; both fall back to safe defaults.
+      // not be spawned, and a number for a real non-zero exit.
       const execError = error as ExecError;
       let exitCode = 1;
       if (typeof execError.code === 'number') {
         exitCode = execError.code;
       }
-      let stdout = '';
-      if (typeof execError.stdout === 'string') {
-        stdout = execError.stdout;
-      }
-      let stderr = '';
-      if (typeof execError.stderr === 'string') {
-        stderr = execError.stderr;
-      }
-      return { agent: this.name, exitCode, stdout, stderr };
+      return { agent: this.name, exitCode, stdout: execError.stdout, stderr: execError.stderr };
     }
   }
 }

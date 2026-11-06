@@ -2,7 +2,6 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   AgentRouter,
-  AgentSpecialistDispatcher,
   CliProcessAgentAdapter,
   CryptoRandomBytesPort,
   DurableApprovalManager,
@@ -27,6 +26,7 @@ import { buildCodeCommandDependencies, REPO_BASE_REF } from './code-command-wiri
 import { CommandRouter } from './command-router.js';
 import { ChildProcessDaemonLauncher } from './daemon-process-launcher.js';
 import { PlanCommand } from './plan-command.js';
+import { buildPlanDispatcherFactory } from './plan-command-wiring.js';
 import { QueueCommand } from './queue-command.js';
 import type { CommandResult } from './types.js';
 
@@ -63,7 +63,7 @@ export function buildRouter(cwd: string): CommandRouter {
     new GitStatusSnapshotter(cwd),
     new YamlConfigReader(join(cwd, 'orquestia.config.yaml')),
     new FsFileExistencePort(),
-    (taskId) => new AgentSpecialistDispatcher(agentRouter, cwd, taskId),
+    buildPlanDispatcherFactory(cwd, agentRouter),
   );
   const codeCommand = new CodeCommand(buildCodeCommandDependencies(cwd, agentRouter));
 
