@@ -65,6 +65,29 @@ describe('AgentSpecialistDispatcher', () => {
     expect(output).toEqual({ branch: '2B', fileManifest: [], codeSnippets: [] });
   });
 
+  it('extracts the JSON object past tool-call transcript noise containing its own braces', async () => {
+    const adapterB = new FakeAgentAdapter(
+      'copilot_cli',
+      jsonOutput(
+        [
+          "$ Shell cat config.ts && echo '{ not: json }'",
+          '{ not: json }',
+          '{"fileManifest":[{"path":"a.ts","kind":"NEW"}],"codeSnippets":[]}',
+        ].join('\n'),
+      ),
+    );
+    const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
+    const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
+
+    const output = await dispatcher.dispatch('2B');
+
+    expect(output).toEqual({
+      branch: '2B',
+      fileManifest: [{ path: 'a.ts', kind: 'NEW' }],
+      codeSnippets: [],
+    });
+  });
+
   it('throws MalformedSpecialistOutputError on invalid JSON', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('not json at all'));
     const router = new AgentRouter([adapterA], ROUTING, new FakeClock());

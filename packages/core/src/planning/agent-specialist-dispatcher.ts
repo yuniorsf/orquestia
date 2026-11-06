@@ -1,4 +1,5 @@
 import type { AgentRouter } from '../agents/agent-router.js';
+import { extractJsonObject } from '../shared/json-response-extractor.js';
 import type {
   FileManifestKind,
   SpecialistBranch,
@@ -40,25 +41,6 @@ function buildPrompt(branch: SpecialistBranch, taskId: string): string {
     'Respond with ONLY a single JSON object, no markdown fences and no commentary, of this exact shape:',
     '{"fileManifest":[{"path":"<repo-relative path>","kind":"NEW"|"MODIFY"}],"codeSnippets":["<snippet>", ...]}',
   ].join('\n');
-}
-
-/**
- * Models reliably ignore "no commentary" at least some of the time —
- * extracts the substring between the first `{` and the last `}` (after
- * stripping a ```json fence, if any), so prose wrapped around the JSON
- * object doesn't break parsing.
- */
-function extractJsonObject(text: string): string {
-  const trimmed = text.trim();
-  const fenced = /```(?:json)?\s*([\s\S]*?)\s*```/.exec(trimmed);
-  const candidate = fenced ? (fenced[1] as string) : trimmed;
-
-  const firstBrace = candidate.indexOf('{');
-  const lastBrace = candidate.lastIndexOf('}');
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
-    return candidate;
-  }
-  return candidate.slice(firstBrace, lastBrace + 1);
 }
 
 function parseSpecialistOutput(branch: SpecialistBranch, stdout: string): SpecialistOutput {
