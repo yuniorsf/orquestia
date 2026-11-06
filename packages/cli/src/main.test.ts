@@ -26,11 +26,21 @@ describe('runCli', () => {
     expect(result.stdout).toContain('queue');
   });
 
-  it('reports "not available yet" for a pending command', async () => {
+  it('reports queue usage for a missing action', async () => {
     const result = await runCli(['queue'], cwd);
 
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain('"queue" is not available yet');
+    expect(result.stderr).toContain('Usage: orquestia queue');
+  });
+
+  it('reports the daemon as not running when nothing is listening on its socket', async () => {
+    const result = await runCli(['queue', 'status'], cwd);
+
+    expect(result).toEqual({
+      exitCode: 1,
+      stdout: '',
+      stderr: 'Orquestia daemon is not running.\n',
+    });
   });
 
   it('reports an unknown command', async () => {

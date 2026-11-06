@@ -5,7 +5,7 @@ export interface QueueConfig {
   readonly autoCleanupOnMerge: boolean;
 }
 
-export type QueuedTaskState = 'queued' | 'running' | 'completed' | 'failed';
+export type QueuedTaskState = 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
 
 export interface QueueEntry {
   readonly taskId: string;

@@ -138,6 +138,64 @@ describe('ConcurrentQueueManager.fail', () => {
   });
 });
 
+describe('ConcurrentQueueManager.cancel', () => {
+  it('throws UnknownQueueEntryError for a task that was never enqueued', async () => {
+    const { manager } = createManager();
+
+    await expect(manager.cancel('missing')).rejects.toThrow(UnknownQueueEntryError);
+  });
+
+  it('removes a queued (not yet running) task without touching the provisioner', async () => {
+    const { manager, provisioner } = createManager(1);
+    await manager.enqueue('task-1', 'origin/develop');
+    await manager.enqueue('task-2', 'origin/develop');
+
+    const entry = await manager.cancel('task-2');
+
+    expect(entry.state).toBe('cancelled');
+    expect(provisioner.createCalls).toEqual([{ taskId: 'task-1', baseRef: 'origin/develop' }]);
+    expect(provisioner.destroyCalls).toEqual([]);
+  });
+
+  it('destroys the worktree and promotes the next queued task when cancelling a running one', async () => {
+    const { manager, provisioner } = createManager(1);
+    await manager.enqueue('task-1', 'origin/develop');
+    await manager.enqueue('task-2', 'origin/develop');
+
+    const entry = await manager.cancel('task-1');
+
+    expect(entry.state).toBe('cancelled');
+    expect(provisioner.destroyCalls).toEqual(['task-1']);
+    expect(manager.get('task-2')?.state).toBe('running');
+  });
+
+  it("always destroys a cancelled running task's worktree, even with autoCleanupOnMerge disabled", async () => {
+    const { manager, provisioner } = createManager(1, false);
+    await manager.enqueue('task-1', 'origin/develop');
+
+    await manager.cancel('task-1');
+
+    expect(provisioner.destroyCalls).toEqual(['task-1']);
+  });
+
+  it.each(['completed', 'failed', 'cancelled'] as const)(
+    'throws InvalidQueueTransitionError when the task is already %s',
+    async (finalState) => {
+      const { manager } = createManager(1);
+      await manager.enqueue('task-1', 'origin/develop');
+      if (finalState === 'completed') {
+        await manager.complete('task-1');
+      } else if (finalState === 'failed') {
+        await manager.fail('task-1');
+      } else {
+        await manager.cancel('task-1');
+      }
+
+      await expect(manager.cancel('task-1')).rejects.toThrow(InvalidQueueTransitionError);
+    },
+  );
+});
+
 describe('ConcurrentQueueManager read accessors', () => {
   it('get() returns undefined for an unknown task', () => {
     const { manager } = createManager();

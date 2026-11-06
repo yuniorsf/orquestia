@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   AgentRouter,
   AgentSpecialistDispatcher,
@@ -12,6 +13,7 @@ import {
   RandomTokenGenerator,
   SQLCipherVaultProvider,
   SystemClock,
+  UnixSocketClient,
   YamlConfigReader,
   claudeCodeCliSpec,
   copilotCliSpec,
@@ -21,10 +23,11 @@ import {
 import { ApprovalsCommand } from './approvals-command.js';
 import { AuthCommand } from './auth-command.js';
 import { CodeCommand } from './code-command.js';
-import { buildCodeCommandDependencies } from './code-command-wiring.js';
+import { buildCodeCommandDependencies, REPO_BASE_REF } from './code-command-wiring.js';
 import { CommandRouter } from './command-router.js';
-import { PendingCommand } from './pending-command.js';
+import { ChildProcessDaemonLauncher } from './daemon-process-launcher.js';
 import { PlanCommand } from './plan-command.js';
+import { QueueCommand } from './queue-command.js';
 import type { CommandResult } from './types.js';
 
 const DEFAULT_GATE_MODES: ApprovalGateModes = {
@@ -39,6 +42,8 @@ const DEFAULT_AGENT_ROUTING: AgentRoutingConfig = {
   branch2a: 'claude_code',
   branch2b: 'copilot_cli',
 };
+
+const QUEUE_DAEMON_SCRIPT_PATH = fileURLToPath(new URL('./queue-daemon.js', import.meta.url));
 
 /** Wires the full `orquestia` command surface against `<cwd>/.orquestia/`. */
 export function buildRouter(cwd: string): CommandRouter {
@@ -75,16 +80,25 @@ export function buildRouter(cwd: string): CommandRouter {
   );
   const authCommand = new AuthCommand(vaultProvider);
 
+  const orquestiaDir = join(cwd, '.orquestia');
+  const socketPath = join(orquestiaDir, 'daemon.sock');
+  const queueCommand = new QueueCommand(
+    new UnixSocketClient(socketPath),
+    new ChildProcessDaemonLauncher(
+      QUEUE_DAEMON_SCRIPT_PATH,
+      [cwd],
+      cwd,
+      join(orquestiaDir, 'daemon.log'),
+    ),
+    REPO_BASE_REF,
+  );
+
   return new CommandRouter([
     new ApprovalsCommand(manager),
     planCommand,
     codeCommand,
     authCommand,
-    new PendingCommand(
-      'queue',
-      'Inspect the worktree task queue',
-      'the background daemon & IPC layer (not yet built)',
-    ),
+    queueCommand,
   ]);
 }
 
