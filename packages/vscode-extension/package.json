@@ -16,12 +16,22 @@
       {
         "command": "orquestia.showWorktreeDiff",
         "title": "Orquestia: Show Worktree Diff Preview"
+      },
+      {
+        "command": "orquestia.runPlanDag",
+        "title": "Orquestia: Run Plan DAG"
+      },
+      {
+        "command": "orquestia.runCodeDag",
+        "title": "Orquestia: Run Code DAG"
       }
     ]
   },
   "activationEvents": [
     "onCommand:orquestia.openKanbanBoard",
-    "onCommand:orquestia.showWorktreeDiff"
+    "onCommand:orquestia.showWorktreeDiff",
+    "onCommand:orquestia.runPlanDag",
+    "onCommand:orquestia.runCodeDag"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",

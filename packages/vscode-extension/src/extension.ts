@@ -1,5 +1,7 @@
-import { GitWorktreeDiffPort, ShellCommandRunner } from '@orquestia/core';
+import { join } from 'node:path';
+import { GitWorktreeDiffPort, ShellCommandRunner, UnixSocketClient } from '@orquestia/core';
 import * as vscode from 'vscode';
+import { runDaemonMethod } from './daemon-commands.js';
 import { renderWorktreeDiffHtml } from './diff-webview.js';
 
 // This is the only file in the package that imports `vscode` — everything
@@ -38,10 +40,26 @@ function openKanbanBoard(): void {
   );
 }
 
+async function runOneClickDag(method: 'plan.run' | 'code.run'): Promise<void> {
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    void vscode.window.showErrorMessage('Orquestia: open a worktree folder first.');
+    return;
+  }
+
+  const cwd = workspaceFolder.uri.fsPath;
+  const socketPath = join(cwd, '.orquestia', 'daemon.sock');
+  const client = new UnixSocketClient(socketPath);
+  const message = await runDaemonMethod(client, method, { cwd });
+  void vscode.window.showInformationMessage(message);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('orquestia.showWorktreeDiff', showWorktreeDiff),
     vscode.commands.registerCommand('orquestia.openKanbanBoard', openKanbanBoard),
+    vscode.commands.registerCommand('orquestia.runPlanDag', () => runOneClickDag('plan.run')),
+    vscode.commands.registerCommand('orquestia.runCodeDag', () => runOneClickDag('code.run')),
   );
 }
 
