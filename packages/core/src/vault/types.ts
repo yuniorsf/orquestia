@@ -30,6 +30,7 @@ export interface CredentialStorePort {
   getCredential(key: string): Promise<string | null>;
   setCredential(key: string, value: string): Promise<void>;
   deleteCredential(key: string): Promise<void>;
+  listCredentialKeys(): Promise<readonly string[]>;
 }
 
 export interface SubscriptionStorePort {

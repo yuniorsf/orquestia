@@ -109,6 +109,17 @@ describe.skipIf(!hasVaultCli())('HashiCorpVaultProvider', () => {
 
       await expect(provider.deleteCredential('was-never-set')).resolves.toBeUndefined();
     });
+
+    it('lists stored credential keys', async () => {
+      const { provider } = createProvider();
+      await provider.setCredential('list-a', '1');
+      await provider.setCredential('list-b', '2');
+
+      const keys = await provider.listCredentialKeys();
+
+      expect(keys).toContain('list-a');
+      expect(keys).toContain('list-b');
+    });
   });
 
   describe('subscriptions', () => {

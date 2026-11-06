@@ -42,4 +42,8 @@ export class FakeCredentialStorePort implements CredentialStorePort {
   async deleteCredential(key: string): Promise<void> {
     this.values.delete(key);
   }
+
+  async listCredentialKeys(): Promise<readonly string[]> {
+    return [...this.values.keys()].sort();
+  }
 }
