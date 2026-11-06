@@ -68,6 +68,33 @@ export class ConcurrentQueueManager {
     return snapshot(entry);
   }
 
+  /**
+   * Cancels a `queued` entry (removed before it ever provisions a
+   * worktree) or a `running` one (its worktree is destroyed, same as a
+   * normal completion's cleanup, freeing its slot for the next queued
+   * task). Already-finished entries (`completed`/`failed`/`cancelled`)
+   * cannot be cancelled.
+   */
+  async cancel(taskId: string): Promise<QueueEntry> {
+    const entry = this.findEntry(taskId);
+    if (!entry) {
+      throw new UnknownQueueEntryError(taskId);
+    }
+    if (entry.state !== 'queued' && entry.state !== 'running') {
+      throw new InvalidQueueTransitionError(taskId, entry.state, 'cancel');
+    }
+
+    const wasRunning = entry.state === 'running';
+    entry.state = 'cancelled';
+
+    if (wasRunning) {
+      await this.provisioner.destroy(taskId);
+      await this.promoteNext();
+    }
+
+    return snapshot(entry);
+  }
+
   get(taskId: string): QueueEntry | undefined {
     const entry = this.findEntry(taskId);
     return entry ? snapshot(entry) : undefined;

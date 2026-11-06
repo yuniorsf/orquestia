@@ -12,4 +12,8 @@ describe('queue public API', () => {
     expect(queue.InvalidQueueTransitionError).toBeTypeOf('function');
     expect(queue.InvalidQueueConfigError).toBeTypeOf('function');
   });
+
+  it('exports the RPC method registration function', () => {
+    expect(queue.registerQueueRpcMethods).toBeTypeOf('function');
+  });
 });
