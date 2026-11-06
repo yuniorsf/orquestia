@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AgentRouter } from '../agents/agent-router.js';
-import { FakeAgentAdapter } from '../agents/test-builders.js';
+import { FakeAgentAdapter, FakeClock } from '../agents/test-builders.js';
 import { AgentCodingRemediationDispatcher } from './agent-coding-remediation-dispatcher.js';
 import { FakeCommandRunnerPort, FakeFileWriterPort } from './test-builders.js';
 import type { OracleCommands } from './types.js';
@@ -22,7 +22,7 @@ function jsonOutput(stdout: string) {
 describe('AgentCodingRemediationDispatcher', () => {
   it('runs the deterministic format-fix command for exit code 10, without dispatching any agent', async () => {
     const adapterB = new FakeAgentAdapter('copilot_cli', jsonOutput('{"files":[]}'));
-    const router = new AgentRouter([adapterB], ROUTING);
+    const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
     const commandRunner = new FakeCommandRunnerPort({
       [FORMAT_FIX_COMMAND]: { exitCode: 0, stdout: '', stderr: '' },
     });
@@ -46,7 +46,7 @@ describe('AgentCodingRemediationDispatcher', () => {
       'claude_code',
       jsonOutput('{"files":[{"path":"src/fixed.ts","content":"fixed"}]}'),
     );
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const commandRunner = new FakeCommandRunnerPort({
       [COMMANDS.buildAndLint]: { exitCode: 1, stdout: 'TS2345: type error', stderr: '' },
     });
@@ -71,7 +71,7 @@ describe('AgentCodingRemediationDispatcher', () => {
 
   it('dispatches 2A for exit code 30, falling back to stderr when the diagnostic run has empty stdout', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('{"files":[]}'));
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const commandRunner = new FakeCommandRunnerPort({
       [COMMANDS.testRun]: { exitCode: 1, stdout: '', stderr: 'test failed: expected 1 to be 2' },
     });
@@ -91,7 +91,7 @@ describe('AgentCodingRemediationDispatcher', () => {
 
   it('falls back to a placeholder when the diagnostic run has neither stdout nor stderr', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('{"files":[]}'));
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const commandRunner = new FakeCommandRunnerPort({
       [COMMANDS.testRun]: { exitCode: 1, stdout: '', stderr: '' },
     });

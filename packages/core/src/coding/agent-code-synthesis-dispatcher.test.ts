@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AgentRouter } from '../agents/agent-router.js';
-import { FakeAgentAdapter } from '../agents/test-builders.js';
+import { FakeAgentAdapter, FakeClock } from '../agents/test-builders.js';
 import { AgentCodeSynthesisDispatcher } from './agent-code-synthesis-dispatcher.js';
 import { FakeFileWriterPort } from './test-builders.js';
 import { MalformedSynthesisOutputError } from './synthesis-json-protocol.js';
@@ -18,7 +18,7 @@ describe('AgentCodeSynthesisDispatcher', () => {
       'claude_code',
       jsonOutput('{"files":[{"path":"src/foo.ts","content":"export const x = 1;"}]}'),
     );
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const fileWriter = new FakeFileWriterPort();
     const dispatcher = new AgentCodeSynthesisDispatcher(router, fileWriter);
 
@@ -35,7 +35,7 @@ describe('AgentCodeSynthesisDispatcher', () => {
 
   it('propagates a malformed response as MalformedSynthesisOutputError', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('not json'));
-    const router = new AgentRouter([adapterA], ROUTING);
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
     const dispatcher = new AgentCodeSynthesisDispatcher(router, new FakeFileWriterPort());
 
     await expect(dispatcher.synthesize('2A', WORKTREE, [])).rejects.toThrow(
