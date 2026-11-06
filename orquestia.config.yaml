@@ -1,0 +1,221 @@
+# Orquestia's own self-hosted configuration.
+#
+# Generated per CLAUDE.md's Tri-Planar Dual-Loop contract, cross-checked
+# against .harness/harness.env, harness.config.json, and the config
+# parsers actually shipped under packages/core/src — not just
+# ORQUESTIA_SPECIFICATION.md's illustrative §5 example, which predates
+# them and uses a different `layers:` shape (`pool:` + a string
+# `primary_fallback`) than the real parser requires (`providers:` + a
+# boolean `primary_fallback`). Sections below follow the real parsers.
+
+version: '3.0'
+project_name: 'Orquestia'
+
+# ==============================================================================
+# 1. SECRET MANAGEMENT
+# ==============================================================================
+# NOT YET config-driven: SQLCipherVaultProvider's path and keychain service
+# name are hardcoded in packages/cli/src/main.ts. Documented here, matching
+# those real defaults exactly, for forward compatibility once vault wiring
+# reads this section.
+vault:
+  provider: 'sqlcipher'
+  sqlcipher:
+    path: '.orquestia/vault.db'
+    keyring_service: 'orquestia-vault-master-key'
+
+# ==============================================================================
+# 2. ATLASSIAN SUITE INTEGRATION (JIRA & CONFLUENCE)
+# ==============================================================================
+# cloud_domain and confluence.space_key are not recorded anywhere in this
+# repo — fill in your real Atlassian site/space before enabling sync.
+# Parsed by parseAtlassianAlmConfig (packages/core/src/atlassian-alm/config.ts);
+# not yet wired into main.ts's command construction.
+atlassian:
+  auth_mode: 'oauth2'
+  cloud_domain: '<your-site>.atlassian.net' # TODO: set your real Atlassian Cloud domain
+  jira:
+    project_key: 'ORQ' # matches harness.config.json's ticketPrefix
+    issue_type: 'Story'
+    transitions:
+      plan_approved: 'To Do'
+      start_coding: 'In Progress'
+      review_ready: 'In Review'
+      completed: 'Done'
+  confluence:
+    space_key: '<TODO>' # TODO: set your real Confluence space key
+    parent_page_title: 'Technical Specifications'
+
+# ==============================================================================
+# 3. CONCURRENCY & DURABLE APPROVALS
+# ==============================================================================
+# NOT YET config-driven: DEFAULT_GATE_MODES and the worktree root are
+# hardcoded in main.ts / agent-sandbox.sh. Values below mirror those real
+# defaults exactly so this section is accurate documentation today.
+runtime:
+  worktrees_dir: '../worktrees' # matches CLAUDE.md's worktree isolation contract
+  concurrency:
+    max_parallel_tasks: 5 # matches harness.config.json's maxConcurrentWorktrees
+    auto_cleanup_on_merge: true
+  approval_gates:
+    after_planning: 'auto'
+    before_coding: 'prompt'
+    before_rebase: 'auto'
+    before_ship: 'manual_token'
+
+# ==============================================================================
+# 4. AST REPO-MAP CONTEXT CONDENSER
+# ==============================================================================
+# Parsed by parseCondenserConfig (packages/core/src/context-condenser/config.ts);
+# not yet wired into main.ts's command construction.
+context_condenser:
+  engine: 'tree_sitter'
+  max_context_tokens: 16000
+  include_signatures_only: true
+  prune_irrelevant_files: true
+
+# ==============================================================================
+# 5. LAYER-BY-LAYER MODEL ROUTING
+# ==============================================================================
+# CLAUDE.md assigns fixed specialist roles (2A -> Claude Code, 2B -> GitHub
+# Copilot, self-healing -> Claude Code directly, review -> script-driven
+# Oracle, not an LLM call) — so every layer below stays disabled, the same
+# reasoning the spec gives for any project with a fixed-role contract.
+#
+# Parsed by parseLayerPoolsConfig (packages/core/src/load-balancer/layer-pools-config.ts).
+# That parser requires "providers" (not "pool") and a BOOLEAN
+# "primary_fallback" on every layer — even disabled ones — which is why
+# every entry below is fully populated despite enabled: false.
+load_balancing:
+  global_enabled: false
+  cooldown_on_429_seconds: 300
+
+layers:
+  # Layer 1: Planning Architecture & Deep Domain Reasoning (Phase 2A)
+  planning_architecture:
+    enabled: false
+    strategy: 'quota_aware'
+    primary_fallback: false
+    providers: []
+
+  # Layer 2: Scaffolding, Contracts & Test Suites (Phase 2B)
+  coding_scaffolding_tests:
+    enabled: false
+    strategy: 'least_cost'
+    primary_fallback: false
+    providers: []
+
+  # Layer 3: Deterministic Oracle / Code Review (Phase 3)
+  # Orquestia's review gate is script-driven (verify-solid-contracts.py +
+  # verify-agent-worktree.sh), not an LLM call.
+  code_review_qa:
+    enabled: false
+    strategy: 'quota_aware'
+    primary_fallback: false
+    providers: []
+
+  # Layer 4: Self-Healing Compile, Lint & Invariant Retries (Phase 4)
+  self_healing_retries:
+    enabled: false
+    strategy: 'least_cost'
+    primary_fallback: false
+    providers: []
+
+# ==============================================================================
+# 6. STACK DEFINITION & DETERMINISTIC COMMANDS
+# ==============================================================================
+# Mirrors .harness/harness.env exactly — keep both in sync if commands change.
+stack:
+  language: 'typescript'
+  package_manager: 'npm'
+  commands:
+    format_check: 'npx prettier --check .'
+    format_fix: 'npx prettier --write .'
+    build_check: 'npx tsc --noEmit && npx eslint . --max-warnings 0'
+    test_run: 'npm test'
+    arch_test_check: 'npm run test:arch --if-present'
+  guardrails:
+    banned_symbols:
+      - pattern: 'eslint-disable|@ts-ignore|@ts-nocheck'
+        replacement: 'fix the underlying type/lint defect (zero suppression tolerance)'
+    required_signatures:
+      async_requires_cancellation: true
+      max_interface_methods: 5
+    layer_isolation:
+      core_dir: 'packages/core/src'
+      forbidden_dependencies:
+        - 'axios'
+        - 'prisma'
+        - 'typeorm'
+        - 'drizzle-orm'
+
+# ==============================================================================
+# 7. PLANNING DAG SPECIFICATION
+# ==============================================================================
+planning_dag:
+  enabled: true
+  invariant: 'zero_repo_mutations'
+  base_branch: 'origin/develop'
+  max_self_heal_retries: 3
+  gates:
+    gate_0: { name: 'Zero-Mutation Invariant', fail_code: 2, action: 'abort' }
+    gate_1: { name: 'Disjoint Ownership (2A ∩ 2B = ∅)', fail_code: 10, remediate_with: 'branch_2b' }
+    gate_2: { name: 'Static Rules & Banned APIs', fail_code: 20, remediate_with: 'branch_2a' }
+    gate_3:
+      {
+        name: 'Architecture & Coverage Check',
+        fail_code: 30,
+        remediate_with: ['branch_2a', 'branch_2b'],
+      }
+  delivery:
+    specs_dir: '.orquestia/specs'
+    sync_confluence: false # flip once confluence.space_key above is set
+    sync_jira: false # flip once atlassian.cloud_domain above is set
+
+# ==============================================================================
+# 8. CODING DAG SPECIFICATION
+# ==============================================================================
+coding_dag:
+  enabled: true
+  base_branch: 'origin/develop'
+  max_self_heal_retries: 3
+  transactional:
+    create_checkpoint_before_retry: true
+    revert_on_regression: true
+  self_healing:
+    exit_10:
+      name: 'Formatting Drift / Disjoint Scope'
+      action: 'run_format_fix'
+    exit_20:
+      name: 'Compiler / Linter / Guardrail Violation'
+      action: 'repair_types_and_diagnostics'
+    exit_30:
+      name: 'Architecture / Test Invariant Failure'
+      action: 'repair_assertion_or_domain_logic'
+  shipment:
+    target_branch: 'develop' # never main/master — see PROTECTED_BRANCHES in .harness/harness.env
+    auto_rebase: true
+    reverify_post_rebase: true
+    commit_convention: 'conventional_commits_with_ticket_key'
+    sync_jira_status: false # flip once atlassian.cloud_domain above is set
+
+# ==============================================================================
+# 9. PLAN ORACLE GUARDRAILS
+# ==============================================================================
+# This is the ONLY section `orquestia plan <taskId>` actually reads today
+# (packages/cli/src/plan-command.ts). Everything above is forward-looking
+# documentation for sections whose parsers exist but aren't wired into
+# main.ts yet, or are fully aspirational. Absent/malformed fields here
+# default to [] (see PlanCommand.loadConfigOrDefault), so this section's
+# presence is what actually turns on enforcement.
+plan_oracle:
+  domain_core_dirs:
+    - 'packages/core/src'
+  forbidden_core_imports:
+    - 'axios'
+    - 'prisma'
+    - 'typeorm'
+    - 'drizzle-orm'
+  guardrail_patterns:
+    - pattern: 'eslint-disable|@ts-ignore|@ts-nocheck'
+      message: 'Linter/typechecker suppression is prohibited (CLAUDE.md §1.3).'

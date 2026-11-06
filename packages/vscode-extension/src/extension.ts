@@ -1,6 +1,16 @@
 import { join } from 'node:path';
-import { GitWorktreeDiffPort, ShellCommandRunner, UnixSocketClient } from '@orquestia/core';
+import {
+  GitWorktreeDiffPort,
+  ShellCommandRunner,
+  UnixSocketClient,
+  YamlConfigReader,
+} from '@orquestia/core';
 import * as vscode from 'vscode';
+import {
+  buildConfigViewModel,
+  renderConfigLoadErrorHtml,
+  renderOrquestiaConfigHtml,
+} from './config-webview.js';
 import { runDaemonMethod } from './daemon-commands.js';
 import { renderWorktreeDiffHtml } from './diff-webview.js';
 
@@ -30,6 +40,30 @@ async function showWorktreeDiff(): Promise<void> {
   panel.webview.html = renderWorktreeDiffHtml(summary);
 }
 
+async function showConfigView(): Promise<void> {
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!workspaceFolder) {
+    void vscode.window.showErrorMessage('Orquestia: open a worktree folder first.');
+    return;
+  }
+
+  const cwd = workspaceFolder.uri.fsPath;
+  const panel = vscode.window.createWebviewPanel(
+    'orquestiaConfigView',
+    'Orquestia: Configuration',
+    vscode.ViewColumn.Beside,
+    {},
+  );
+
+  try {
+    const config = await new YamlConfigReader(join(cwd, 'orquestia.config.yaml')).loadConfig();
+    panel.webview.html = renderOrquestiaConfigHtml(buildConfigViewModel(config));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    panel.webview.html = renderConfigLoadErrorHtml(message);
+  }
+}
+
 function openKanbanBoard(): void {
   // Fetching real issues needs an authenticated IssueBoardPort, which
   // depends on the `auth` credential vault wiring tracked separately
@@ -57,6 +91,7 @@ async function runOneClickDag(method: 'plan.run' | 'code.run'): Promise<void> {
 export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.commands.registerCommand('orquestia.showWorktreeDiff', showWorktreeDiff),
+    vscode.commands.registerCommand('orquestia.showConfigView', showConfigView),
     vscode.commands.registerCommand('orquestia.openKanbanBoard', openKanbanBoard),
     vscode.commands.registerCommand('orquestia.runPlanDag', () => runOneClickDag('plan.run')),
     vscode.commands.registerCommand('orquestia.runCodeDag', () => runOneClickDag('code.run')),
