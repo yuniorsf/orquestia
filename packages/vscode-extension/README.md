@@ -1,6 +1,6 @@
 # Orquestia
 
-Kanban board, live worktree diff previews, and one-click Plan/Code DAG execution for the [Orquestia](https://github.com/yuniorsf/orquestia) Tri-Planar multi-agent orchestrator — directly inside VS Code / Cursor.
+Kanban board, live worktree diff previews, and one-click Plan/Code DAG execution for the [Orquestia](https://github.com/yuniorsf/orquestia) multi-agent orchestrator — directly inside VS Code / Cursor.
 
 ## Commands
 

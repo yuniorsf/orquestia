@@ -43,7 +43,7 @@ Secret storage is decoupled behind an `IVaultProvider` abstraction with two inte
 - **SQLCipherVaultProvider** — local, `~/.orquestia/vault.db`, AES-256 encryption keyed via the OS keyring (macOS Keychain / Windows Credential Manager).
 - **HashiCorpVaultProvider** — enterprise, HTTP API, OIDC/AppRole/Token auth, corporate audit & RBAC.
 
-Atlassian access uses OAuth 2.0 (3LO) with PKCE via an ephemeral loopback listener — no long-lived static API tokens. See [`ORQUESTIA_SPECIFICATION.md § 4`](ORQUESTIA_SPECIFICATION.md#4-multi-tier-security--secret-storage-architecture).
+Atlassian access uses OAuth 2.0 (3LO) with PKCE via an ephemeral loopback listener — no long-lived static API tokens. See [`ORQUESTIA_SPECIFICATION.md § 5`](ORQUESTIA_SPECIFICATION.md#5-multi-tier-security--secret-storage-architecture).
 
 ## Resilience
 
@@ -52,7 +52,7 @@ Atlassian access uses OAuth 2.0 (3LO) with PKCE via an ephemeral loopback listen
 - **Bounded Self-Healing with Dual Rollback** — each repair attempt is checkpointed (`git stash create`); a regression triggers immediate rollback before trying an alternate strategy.
 - **Durable Human-in-the-Loop Approvals** — pushes, rebases, and ship actions can be gated behind explicit developer sign-off, persisted in `.orquestia/state.json`.
 
-Details: [`ORQUESTIA_SPECIFICATION.md § 5`](ORQUESTIA_SPECIFICATION.md#5-advanced-resilience--context-management).
+Details: [`ORQUESTIA_SPECIFICATION.md § 6`](ORQUESTIA_SPECIFICATION.md#6-advanced-resilience--context-management).
 
 ## Monorepo Layout (Target)
 
@@ -66,24 +66,24 @@ orquestia-monorepo/
 └── .orquestia/       # Runtime: specs/, worktrees/, state.json, vault.db
 ```
 
-Full tree: [`ORQUESTIA_SPECIFICATION.md § 6`](ORQUESTIA_SPECIFICATION.md#6-monorepo-structure--directory-organization).
+Full tree: [`ORQUESTIA_SPECIFICATION.md § 7`](ORQUESTIA_SPECIFICATION.md#7-monorepo-structure--directory-organization).
 
 ## Configuration
 
-Project behavior — vault backend, Atlassian sync, concurrency limits, approval gates, context condenser budget, agent/fallback routing, stack toolchain commands, and both DAG specs — is declared in `orquestia.config.yaml`. See the annotated reference: [`ORQUESTIA_SPECIFICATION.md § 7`](ORQUESTIA_SPECIFICATION.md#7-configuration-specification-orquestiaconfigyaml).
+Project behavior — vault backend, Atlassian sync, concurrency limits, approval gates, context condenser budget, agent/fallback routing, orchestration architecture, stack toolchain commands, and both DAG specs — is declared in `orquestia.config.yaml`. See the annotated reference: [`ORQUESTIA_SPECIFICATION.md § 8`](ORQUESTIA_SPECIFICATION.md#8-master-configuration-specification-orquestiaconfigyaml).
 
 ## Distribution
 
 - **`@orquestia/cli`** — global npm install or a self-contained Bun/Node SEA binary; runs the background daemon, worktree pool, and headless CI/CD execution.
 - **VS Code / Cursor extension** (`orquestia-3.0.0.vsix`) — Kanban views for Jira, live diff previews per worktree, task palette, one-click `/orquestia-plan-dag` and `/orquestia-code-dag`, communicating with the daemon over IPC/JSON-RPC.
 
-Details: [`ORQUESTIA_SPECIFICATION.md § 8`](ORQUESTIA_SPECIFICATION.md#8-product-distribution--packaging-model).
+Details: [`ORQUESTIA_SPECIFICATION.md § 9`](ORQUESTIA_SPECIFICATION.md#9-product-distribution--packaging-model).
 
 ---
 
 ## Building This Repository
 
-Orquestia's own codebase is developed using the **Tri-Planar Dual-Loop Multi-Agent Architecture** — the same class of orchestration this project ships to others, applied reflexively to itself (Google Antigravity as outer-loop DAG orchestrator, Claude Code for domain/architecture reasoning, GitHub Copilot for mechanical QA scaffolding, backed by a Deterministic Oracle Substrate and Git worktree isolation).
+Orquestia's own codebase is developed using the same class of multi-agent orchestration this project ships to others, applied reflexively to itself — Google Antigravity as outer-loop DAG orchestrator dispatching whichever workers `orquestia.config.yaml`'s `orchestration.architecture` currently selects, backed by a Deterministic Oracle Substrate and Git worktree isolation. The orchestration **topology** itself is pluggable (see "Switching Orchestration Architectures" below); this repository currently runs the default, **Tri-Planar Dual-Loop** architecture — fixed Claude Code (domain/architecture reasoning) and GitHub Copilot (mechanical QA scaffolding) roles.
 
 | Plane | Agent | Responsibility | Contracts |
 |---|---|---|---|
@@ -113,7 +113,16 @@ Produces `packages/vscode-extension/dist/orquestia.vsix`, installable via `code 
 
 ### Switching Orchestration Architectures
 
-`orquestia.config.yaml`'s `orchestration.architecture` selects the DAG topology — currently `fixed_tri_planar` (the default: fixed Claude Code / GitHub Copilot 2A/2B roles) or `hierarchical_n_worker` (an open, config-declared worker list). Switching architectures regenerates every governance file that describes the topology to Claude Code, GitHub Copilot, and Google Antigravity — `CLAUDE.md`, `.github/copilot-instructions.md`, the `code-gen-dag`/`plan-gen-dag` skills on both planes, and `.antigravity/workflows/*`:
+`orquestia.config.yaml`'s `orchestration.architecture` selects the DAG topology. Four are implemented:
+
+| Architecture | Shape |
+|---|---|
+| `fixed_tri_planar` (default) | Fixed Claude Code / GitHub Copilot 2A/2B roles |
+| `hierarchical_n_worker` | Open, config-declared worker list — parallel fan-out + join barrier |
+| `handoff_swarm` | Open worker list, dispatched strictly in sequence — no central join barrier |
+| `blackboard` | Open contributor list, shared workspace, no disjoint ownership — conflicts resolved by last-writer-wins |
+
+Switching architectures regenerates every governance file that describes the topology to Claude Code, GitHub Copilot, and Google Antigravity — `CLAUDE.md`, `.github/copilot-instructions.md`, the `code-gen-dag`/`plan-gen-dag` skills across all three planes (`.claude/`, `.github/`, `.agents/`), `.claude/commands/*.md`, and `.antigravity/workflows/*`:
 
 ```bash
 # Default — regenerates today's fixed 2A/2B files (byte-identical; no worker args)
@@ -121,6 +130,8 @@ Produces `packages/vscode-extension/dist/orquestia.vsix`, installable via `code 
 
 # Open worker list — one or more "name:agent" pairs
 ./scripts/init-orchestration.sh hierarchical_n_worker "architecture:claude_code" "contracts:copilot_cli"
+./scripts/init-orchestration.sh handoff_swarm "first:claude_code" "second:copilot_cli"
+./scripts/init-orchestration.sh blackboard "alpha:claude_code" "beta:copilot_cli"
 ```
 
-The generator also appends `orquestia.config.yaml`'s `orchestration:` section the first time it's run (it won't overwrite one that already exists — remove it manually first to switch). **Generated files are starting points**: customize them or replace them entirely once generated. Blackboard and handoff/swarm topologies are tracked separately (not yet implemented — see `ORQ-38`).
+The generator also appends `orquestia.config.yaml`'s `orchestration:` section the first time it's run (it won't overwrite one that already exists — remove it manually first to switch). **Generated files are starting points**: customize them or replace them entirely once generated.

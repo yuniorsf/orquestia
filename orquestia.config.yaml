@@ -226,8 +226,12 @@ plan_oracle:
 # Selects the DAG topology itself — not yet wired into main.ts's command
 # construction, but drives `scripts/init-orchestration.sh`, which
 # regenerates CLAUDE.md / .github/copilot-instructions.md / the
-# code-gen-dag & plan-gen-dag skills / .antigravity/workflows/* to match
-# whichever architecture is selected here. See README's "Switching
-# Orchestration Architectures" section.
+# code-gen-dag & plan-gen-dag skill mirrors across all three governance
+# planes (.claude/, .github/, .agents/, plus .claude/commands/*.md) /
+# .antigravity/workflows/* to match whichever architecture is selected
+# here. Four architectures are implemented: fixed_tri_planar (this
+# repo's current selection), hierarchical_n_worker, handoff_swarm, and
+# blackboard — see packages/core/src/orchestration/ and README's
+# "Switching Orchestration Architectures" section.
 orchestration:
   architecture: 'fixed_tri_planar'

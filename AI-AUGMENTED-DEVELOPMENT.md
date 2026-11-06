@@ -1,6 +1,6 @@
 # AI-Augmented Multi-Agent Development Standard
 
-This repository implements a language-agnostic **Tri-Planar Dual-Loop Multi-Agent Architecture** across Outer-Loop DAG orchestration, Inner-Loop specialist execution, editor assistance, and GitHub Actions automation, governed by a **Deterministic Oracle Substrate**.
+This repository implements a language-agnostic multi-agent orchestration architecture across Outer-Loop DAG orchestration, Inner-Loop specialist execution, editor assistance, and GitHub Actions automation, governed by a **Deterministic Oracle Substrate**. The orchestration **topology** is config-selectable (`orquestia.config.yaml`'s `orchestration.architecture` — see the root `README.md`'s "Switching Orchestration Architectures"); this document describes the default, currently-selected **Tri-Planar Dual-Loop** topology. Switching architectures regenerates the files this document references (`CLAUDE.md`, `.github/copilot-instructions.md`, the skill/command mirrors below, `.antigravity/workflows/*`) via `scripts/init-orchestration.sh` — don't hand-edit them directly, or the next regeneration (or the byte-identity regression test in `packages/cli/src/init-orchestration-generator.test.ts`) will overwrite or flag the drift.
 
 ---
 

@@ -164,8 +164,23 @@ def render(text: str) -> str:
 FILE_DESTINATIONS = {
     "CLAUDE.md": ["CLAUDE.md"],
     "copilot-instructions.md": [".github/copilot-instructions.md"],
-    "code-gen-dag-SKILL.md": [".claude/skills/code-gen-dag/SKILL.md", ".github/skills/code-gen-dag/SKILL.md"],
-    "plan-gen-dag-SKILL.md": [".claude/skills/plan-gen-dag/SKILL.md", ".github/skills/plan-gen-dag/SKILL.md"],
+    # .agents/skills/* and .claude/commands/*.md are additional mirrors of
+    # the same skill content (confirmed byte-identical to .claude/skills/*
+    # when this repo was audited) — missed by the original ORQ-42 survey,
+    # so they drifted out of sync with whichever architecture was actually
+    # selected. Covered here going forward.
+    "code-gen-dag-SKILL.md": [
+        ".claude/skills/code-gen-dag/SKILL.md",
+        ".github/skills/code-gen-dag/SKILL.md",
+        ".agents/skills/code-gen-dag/SKILL.md",
+        ".claude/commands/code-gen-dag.md",
+    ],
+    "plan-gen-dag-SKILL.md": [
+        ".claude/skills/plan-gen-dag/SKILL.md",
+        ".github/skills/plan-gen-dag/SKILL.md",
+        ".agents/skills/plan-gen-dag/SKILL.md",
+        ".claude/commands/plan-gen-dag.md",
+    ],
     "antigravity-code-gen-dag.md": [".antigravity/workflows/code-gen-dag.md"],
     "antigravity-plan-gen-dag.md": [".antigravity/workflows/plan-gen-dag.md"],
     "antigravity-code-gen-dag.json": [".antigravity/workflows/code-gen-dag.json"],
