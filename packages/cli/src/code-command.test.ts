@@ -104,6 +104,46 @@ describe('CodeCommand', () => {
     expect(result.stderr).toBe('Manifest decomposition failed for "ORQ-35": raw failure\n');
   });
 
+  it('reports a clean failure instead of crashing when code synthesis throws (ORQ-52)', async () => {
+    const command = new CodeCommand(
+      buildDeps({
+        codeSynthesisDispatcherFactory: () => ({
+          synthesize: async () => {
+            throw new Error(
+              'Branch 2B synthesis returned malformed output: response was not valid JSON.',
+            );
+          },
+        }),
+      }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result).toEqual({
+      exitCode: 2,
+      stdout:
+        'Code synthesis failed for "ORQ-35": Branch 2B synthesis returned malformed output: response was not valid JSON.\nWorktree left at /worktrees/ORQ-35 for inspection.\n',
+      stderr: '',
+    });
+  });
+
+  it('stringifies a non-Error throw from code synthesis', async () => {
+    const command = new CodeCommand(
+      buildDeps({
+        codeSynthesisDispatcherFactory: () => ({
+          synthesize: async () => {
+            throw 'raw synthesis failure';
+          },
+        }),
+      }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toContain('Code synthesis failed for "ORQ-35": raw synthesis failure');
+  });
+
   it('reports a disjoint allocation error without provisioning a worktree when remediation stays exhausted', async () => {
     const provisioner = new FakeWorktreeProvisioner(() => WORKTREE);
     const stillOverlapping: SpecialistOutput = {
