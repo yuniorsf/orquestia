@@ -9,6 +9,14 @@ export interface WorktreeProvisioner {
   destroy(taskId: string): Promise<void>;
 }
 
+/** Thrown when a newly-provisioned worktree's `.harness/harness.env` `INIT_CMD` (e.g. `npm ci`) fails — never left silently broken for the Oracle to discover several self-heal cycles later. */
+export class WorktreeInitializationError extends Error {
+  constructor(worktreePath: string, initCommand: string, cause: Error) {
+    super(`Worktree init command "${initCommand}" failed in "${worktreePath}": ${cause.message}`);
+    this.name = 'WorktreeInitializationError';
+  }
+}
+
 export interface CheckpointHandle {
   readonly id: string;
 }
