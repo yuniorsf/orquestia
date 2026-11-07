@@ -72,7 +72,7 @@ describe('resolveAgentRoutingConfig', () => {
     const layers = [
       layer(CODING_LAYER_NAME, {
         providers: [
-          provider({ provider: 'ollama', priority: 1 }),
+          provider({ provider: 'mistral_cloud', priority: 1 }),
           provider({ provider: 'claude_code', priority: 2 }),
         ],
       }),
@@ -83,10 +83,20 @@ describe('resolveAgentRoutingConfig', () => {
 
   it('falls back when every provider in the layer is unmapped', () => {
     const layers = [
-      layer(CODING_LAYER_NAME, { providers: [provider({ provider: 'ollama', priority: 1 })] }),
+      layer(CODING_LAYER_NAME, {
+        providers: [provider({ provider: 'mistral_cloud', priority: 1 })],
+      }),
     ];
 
     expect(resolveAgentRoutingConfig(layers, FALLBACK).branch2b).toBe('copilot_cli');
+  });
+
+  it('resolves a provider id to the ollama AgentName now that an adapter is registered for it', () => {
+    const layers = [
+      layer(CODING_LAYER_NAME, { providers: [provider({ provider: 'ollama', priority: 1 })] }),
+    ];
+
+    expect(resolveAgentRoutingConfig(layers, FALLBACK).branch2b).toBe('ollama');
   });
 
   it('treats a provider with no explicit priority as lowest priority', () => {

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import {
   AgentRouter,
   CliProcessAgentAdapter,
+  HttpAgentAdapter,
   CryptoRandomBytesPort,
   DurableApprovalManager,
   FsFileExistencePort,
@@ -17,6 +18,7 @@ import {
   antigravityCliSpec,
   claudeCodeCliSpec,
   copilotCliSpec,
+  ollamaEndpoint,
   parseLayerPoolsConfig,
   resolveAgentRoutingConfig,
   type AgentRoutingConfig,
@@ -124,6 +126,7 @@ export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promi
       new CliProcessAgentAdapter(claudeCodeCliSpec),
       new CliProcessAgentAdapter(copilotCliSpec),
       new CliProcessAgentAdapter(antigravityCliSpec),
+      new HttpAgentAdapter(ollamaEndpoint, fetch),
     ],
     agentRoutingConfig,
     new SystemClock(),

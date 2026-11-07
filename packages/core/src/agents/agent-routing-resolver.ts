@@ -8,16 +8,17 @@ export const CODING_LAYER_NAME = 'coding_scaffolding_tests';
 /**
  * Config-level provider ids (free strings in `orquestia.config.yaml`) don't
  * always match the domain `AgentName` literal 1:1 (e.g. `'github_copilot'`
- * vs. `'copilot_cli'`), and some provider ids (e.g. `'ollama'`) have no
- * registered CLI adapter at all yet — this is the single place that
- * translation is allowed to happen, so no call site re-derives or
- * hardcodes it. An unmapped id is skipped, not rejected: a layer may
- * legitimately mix adapter-backed and not-yet-dispatchable providers.
+ * vs. `'copilot_cli'`) — this is the single place that translation is
+ * allowed to happen, so no call site re-derives or hardcodes it. A
+ * provider id with no entry here is skipped, not rejected: a layer may
+ * legitimately mix adapter-backed providers with ones nothing can dispatch
+ * to yet (a future `openai_compatible` provider type, say).
  */
 const PROVIDER_ID_TO_AGENT_NAME: ReadonlyMap<string, AgentName> = new Map([
   ['claude_code', 'claude_code'],
   ['antigravity', 'antigravity'],
   ['github_copilot', 'copilot_cli'],
+  ['ollama', 'ollama'],
 ]);
 
 /** Picks the lowest-`priority` provider in `layer` that resolves to a known, adapter-backed `AgentName`; `fallback` otherwise. */
