@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -85,6 +85,38 @@ describe('runCli', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Unknown command "bogus"');
+  });
+
+  it('resolves agent routing from a real orquestia.config.yaml without throwing', async () => {
+    await writeFile(
+      join(cwd, 'orquestia.config.yaml'),
+      [
+        "version: '1.0'",
+        "project_name: 'fixture'",
+        'layers:',
+        '  planning_architecture:',
+        '    enabled: true',
+        "    strategy: 'quota_aware'",
+        '    primary_fallback: true',
+        '    providers:',
+        "      - name: 'antigravity_primary'",
+        "        provider: 'antigravity'",
+        "        base_url: 'cli://agy'",
+        "        model: 'antigravity-default'",
+        '        priority: 1',
+        '  coding_scaffolding_tests:',
+        '    enabled: false',
+        "    strategy: 'least_cost'",
+        '    primary_fallback: false',
+        '    providers: []',
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const result = await runCli(['--help'], cwd);
+
+    expect(result.exitCode).toBe(0);
   });
 
   it('strips a global -v flag before command routing, regardless of position', async () => {
