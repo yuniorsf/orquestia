@@ -55,4 +55,33 @@ describe('GitStashCheckpoint', () => {
     await expect(checkpoint.rollback(handle)).resolves.toBeUndefined();
     await expect(readFile(filePath(), 'utf8')).resolves.toBe('original\n');
   });
+
+  it('rolls back without moving the branch ref (ORQ-51)', async () => {
+    const checkpoint = new GitStashCheckpoint(repoRoot);
+    const { stdout: branchTipBefore } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: repoRoot,
+    });
+
+    await writeFile(filePath(), 'before remediation\n', 'utf8');
+    const handle = await checkpoint.create();
+    await writeFile(filePath(), 'non-convergent remediation\n', 'utf8');
+
+    await checkpoint.rollback(handle);
+
+    const { stdout: branchTipAfter } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      cwd: repoRoot,
+    });
+    expect(branchTipAfter.trim()).toBe(branchTipBefore.trim());
+  });
+
+  it('restores a file deleted during a non-convergent remediation attempt', async () => {
+    const checkpoint = new GitStashCheckpoint(repoRoot);
+    await writeFile(filePath(), 'before remediation\n', 'utf8');
+    const handle = await checkpoint.create();
+    await rm(filePath());
+
+    await checkpoint.rollback(handle);
+
+    await expect(readFile(filePath(), 'utf8')).resolves.toBe('before remediation\n');
+  });
 });
