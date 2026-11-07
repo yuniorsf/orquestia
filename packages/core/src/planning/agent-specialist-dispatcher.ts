@@ -34,10 +34,14 @@ function branchRoleDescription(branch: SpecialistBranch): string {
   return 'DTO/adapter boilerplate, test data builders, and unit tests';
 }
 
+const WIRING_INSTRUCTION =
+  'If this task introduces a new unit that must be reachable at runtime (e.g. a new command, handler, route, or export), include every existing file that must change to register or wire it in as its own MODIFY entry in your manifest — a new unit nothing ever calls does not satisfy the task.';
+
 function buildPrompt(branch: SpecialistBranch, taskId: string): string {
   return [
     `You are Branch ${branch} of the read-only Planning DAG for task "${taskId}".`,
     `Analyze the current repository and propose the ${branchRoleDescription(branch)} this task requires.`,
+    ...(branch === '2A' ? [WIRING_INSTRUCTION] : []),
     'Do not write or modify any files — this is read-only analysis.',
     'Respond with ONLY a single JSON object, no markdown fences and no commentary, of this exact shape:',
     '{"fileManifest":[{"path":"<repo-relative path>","kind":"NEW"|"MODIFY"}],"codeSnippets":["<snippet>", ...]}',

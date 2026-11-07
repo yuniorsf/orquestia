@@ -37,6 +37,25 @@ describe('AgentSpecialistDispatcher', () => {
     });
   });
 
+  it('asks Branch 2A, but not Branch 2B, to wire new units in (ORQ-53)', async () => {
+    const adapterA = new FakeAgentAdapter(
+      'claude_code',
+      jsonOutput('{"fileManifest":[],"codeSnippets":[]}'),
+    );
+    const adapterB = new FakeAgentAdapter(
+      'copilot_cli',
+      jsonOutput('{"fileManifest":[],"codeSnippets":[]}'),
+    );
+    const router = new AgentRouter([adapterA, adapterB], ROUTING, new FakeClock());
+    const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
+
+    await dispatcher.dispatch('2A');
+    await dispatcher.dispatch('2B');
+
+    expect(adapterA.calls[0]?.prompt).toContain('register or wire it in');
+    expect(adapterB.calls[0]?.prompt).not.toContain('register or wire it in');
+  });
+
   it('strips a ```json markdown fence before parsing', async () => {
     const adapterB = new FakeAgentAdapter(
       'copilot_cli',
