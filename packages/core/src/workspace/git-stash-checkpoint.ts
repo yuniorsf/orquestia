@@ -7,7 +7,18 @@ const execFileAsync = promisify(execFile);
 /**
  * Snapshots the worktree via `git stash create` (which captures a checkpoint
  * commit without touching the working tree, so the agent's edits stay in
- * place) and rolls back via `git reset --hard` on regression ($f^{op}$).
+ * place) and rolls back via `git checkout <commit> -- .` on regression
+ * ($f^{op}$).
+ *
+ * Rollback deliberately avoids `git reset --hard`: the worktree stays
+ * checked out on the task branch (not detached) for the whole coding run,
+ * so `reset --hard <stash-create-sha>` would move the branch ref itself to
+ * that stash commit — a 2-parent merge commit (git's standard stash shape).
+ * That silently corrupts any later `git rebase` onto the base branch, which
+ * drops merge commits from its replay by default and discards whatever
+ * tracked-file content only existed via the merge's non-first parent (e.g.
+ * a legitimate MODIFY from the original synthesis). `git checkout <commit>
+ * -- .` restores the same tracked-file content without ever touching HEAD.
  */
 export class GitStashCheckpoint implements CheckpointPort {
   constructor(private readonly cwd: string) {}
@@ -23,6 +34,6 @@ export class GitStashCheckpoint implements CheckpointPort {
       // clean — there is nothing to roll back to.
       return;
     }
-    await execFileAsync('git', ['reset', '--hard', handle.id], { cwd: this.cwd });
+    await execFileAsync('git', ['checkout', handle.id, '--', '.'], { cwd: this.cwd });
   }
 }
