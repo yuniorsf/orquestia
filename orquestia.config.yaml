@@ -97,20 +97,23 @@ load_balancing:
 
 layers:
   # Layer 1: Planning Architecture & Deep Domain Reasoning (Phase 2A)
+  # NOTE: antigravity is priority 1 here (over claude_code) as a deliberate,
+  # temporary test setting — swap back once the Antigravity end-to-end test
+  # is done, unless you've decided to keep it as the default planner.
   planning_architecture:
     enabled: true
     strategy: 'quota_aware'
     primary_fallback: true
     providers:
-      - name: 'claude_code_deep_reasoning'
-        provider: 'claude_code'
-        base_url: 'cli://claude-code' # sentinel: dispatched via CLI, not HTTP
-        model: 'claude-opus-5-5'
-        priority: 1
       - name: 'antigravity_orchestrator'
         provider: 'antigravity'
         base_url: 'cli://google-antigravity' # sentinel: DAG orchestrator, not an HTTP completion API
         model: 'antigravity-default' # TODO: replace with Antigravity's real model/workflow id if it exposes one
+        priority: 1
+      - name: 'claude_code_deep_reasoning'
+        provider: 'claude_code'
+        base_url: 'cli://claude-code' # sentinel: dispatched via CLI, not HTTP
+        model: 'claude-opus-5-5'
         priority: 2
 
   # Layer 2: Scaffolding, Contracts & Test Suites (Phase 2B)
