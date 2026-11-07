@@ -116,7 +116,16 @@ export class CodeCommand implements CliCommand {
     }
 
     const synthesisDispatcher = this.deps.codeSynthesisDispatcherFactory();
-    await new CodeSynthesisDispatchService(synthesisDispatcher).dispatchBoth(worktree, manifest);
+    try {
+      await new CodeSynthesisDispatchService(synthesisDispatcher).dispatchBoth(worktree, manifest);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        exitCode: 2,
+        stdout: `Code synthesis failed for "${taskId}": ${message}\nWorktree left at ${worktree.path} for inspection.\n`,
+        stderr: '',
+      };
+    }
 
     const commandRunner = this.deps.commandRunnerFactory(worktree);
     const oracleCommands = this.deps.oracleCommandsFactory(manifest);
