@@ -89,6 +89,42 @@ describe('CliProcessAgentAdapter', () => {
     });
   });
 
+  it("post-processes stdout through the spec's extractResponse on a successful invocation", async () => {
+    const spec: AgentCliSpec = {
+      name: 'antigravity',
+      executable: process.execPath,
+      buildArgs: () => ['-e', 'process.stdout.write(JSON.stringify({response: "unwrapped"}))'],
+      extractResponse: (rawStdout) => (JSON.parse(rawStdout) as { response: string }).response,
+    };
+    const adapter = new CliProcessAgentAdapter(spec);
+
+    const result = await adapter.invoke({ branch: '2A', cwd, prompt: 'noop' });
+
+    expect(result.stdout).toBe('unwrapped');
+  });
+
+  it("post-processes stdout through the spec's extractResponse on a failed invocation too", async () => {
+    const spec: AgentCliSpec = {
+      name: 'antigravity',
+      executable: process.execPath,
+      buildArgs: () => [
+        '-e',
+        'process.stdout.write(JSON.stringify({response: "partial-envelope"})); process.exit(2)',
+      ],
+      extractResponse: (rawStdout) => (JSON.parse(rawStdout) as { response: string }).response,
+    };
+    const adapter = new CliProcessAgentAdapter(spec);
+
+    const result = await adapter.invoke({ branch: '2B', cwd, prompt: 'noop' });
+
+    expect(result).toEqual({
+      agent: 'antigravity',
+      exitCode: 2,
+      stdout: 'partial-envelope',
+      stderr: '',
+    });
+  });
+
   it('falls back to exit code 1 with empty output when the executable cannot be spawned at all', async () => {
     const spec: AgentCliSpec = {
       name: 'antigravity',

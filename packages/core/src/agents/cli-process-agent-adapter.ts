@@ -42,7 +42,7 @@ export class CliProcessAgentAdapter implements AgentAdapterPort {
       const { stdout, stderr } = await execFileAsync(this.spec.executable, [...args], {
         cwd: request.cwd,
       });
-      return { agent: this.name, exitCode: 0, stdout, stderr };
+      return { agent: this.name, exitCode: 0, stdout: this.extractResponse(stdout), stderr };
     } catch (error) {
       // node:child_process rejects with an Error carrying code/stdout/stderr.
       // `code` is a string (e.g. "ENOENT") when the executable itself could
@@ -52,7 +52,16 @@ export class CliProcessAgentAdapter implements AgentAdapterPort {
       if (typeof execError.code === 'number') {
         exitCode = execError.code;
       }
-      return { agent: this.name, exitCode, stdout: execError.stdout, stderr: execError.stderr };
+      return {
+        agent: this.name,
+        exitCode,
+        stdout: this.extractResponse(execError.stdout),
+        stderr: execError.stderr,
+      };
     }
+  }
+
+  private extractResponse(rawStdout: string): string {
+    return this.spec.extractResponse ? this.spec.extractResponse(rawStdout) : rawStdout;
   }
 }
