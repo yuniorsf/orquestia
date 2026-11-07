@@ -14,8 +14,11 @@ import {
   SystemClock,
   UnixSocketClient,
   YamlConfigReader,
+  antigravityCliSpec,
   claudeCodeCliSpec,
   copilotCliSpec,
+  parseLayerPoolsConfig,
+  resolveAgentRoutingConfig,
   type AgentRoutingConfig,
   type ApprovalGateModes,
   type TraceSinkPort,
@@ -39,7 +42,12 @@ const DEFAULT_GATE_MODES: ApprovalGateModes = {
   before_ship: 'manual_token',
 };
 
-/** Default Tri-Planar assignment until `agents.branch_2a`/`branch_2b` config parsing exists. */
+/**
+ * Default Tri-Planar assignment — used whenever `orquestia.config.yaml` is
+ * absent/malformed, or its `layers.planning_architecture`/
+ * `layers.coding_scaffolding_tests` sections don't resolve to a registered
+ * agent (see `loadAgentRoutingConfig` and `resolveAgentRoutingConfig`).
+ */
 const DEFAULT_AGENT_ROUTING: AgentRoutingConfig = {
   branch2a: 'claude_code',
   branch2b: 'copilot_cli',
@@ -83,8 +91,25 @@ export function parseVerbosity(argv: readonly string[]): {
   return { level: Math.min(level, MAX_VERBOSITY_LEVEL) as VerbosityLevel, rest };
 }
 
+/**
+ * Reads `<cwd>/orquestia.config.yaml`'s `layers:` section and resolves it
+ * to an `AgentRoutingConfig`, falling back to `DEFAULT_AGENT_ROUTING`
+ * whenever the file is absent, its `layers:` section is malformed, or a
+ * layer doesn't resolve to a registered agent — mirrors `PlanCommand`'s own
+ * `loadConfigOrDefault` fallback-on-failure convention, since this must
+ * stay non-fatal for `cwd`s (fixtures, fresh projects) with no config file.
+ */
+async function loadAgentRoutingConfig(cwd: string): Promise<AgentRoutingConfig> {
+  try {
+    const config = await new YamlConfigReader(join(cwd, 'orquestia.config.yaml')).loadConfig();
+    return resolveAgentRoutingConfig(parseLayerPoolsConfig(config.raw), DEFAULT_AGENT_ROUTING);
+  } catch {
+    return DEFAULT_AGENT_ROUTING;
+  }
+}
+
 /** Wires the full `orquestia` command surface against `<cwd>/.orquestia/`. */
-export function buildRouter(cwd: string, traceSink?: TraceSinkPort): CommandRouter {
+export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promise<CommandRouter> {
   const stateStore = new JsonFileApprovalStateStore(join(cwd, '.orquestia', 'state.json'));
   const manager = new DurableApprovalManager(
     stateStore,
@@ -93,9 +118,14 @@ export function buildRouter(cwd: string, traceSink?: TraceSinkPort): CommandRout
     DEFAULT_GATE_MODES,
   );
 
+  const agentRoutingConfig = await loadAgentRoutingConfig(cwd);
   const agentRouter = new AgentRouter(
-    [new CliProcessAgentAdapter(claudeCodeCliSpec), new CliProcessAgentAdapter(copilotCliSpec)],
-    DEFAULT_AGENT_ROUTING,
+    [
+      new CliProcessAgentAdapter(claudeCodeCliSpec),
+      new CliProcessAgentAdapter(copilotCliSpec),
+      new CliProcessAgentAdapter(antigravityCliSpec),
+    ],
+    agentRoutingConfig,
     new SystemClock(),
     traceSink,
   );
@@ -146,6 +176,6 @@ export async function runCli(argv: readonly string[], cwd: string): Promise<Comm
   const { level, rest } = parseVerbosity(argv);
   const traceSink =
     level > 0 ? new ConsoleTraceSink(level, (line) => process.stderr.write(line)) : undefined;
-  const router = buildRouter(cwd, traceSink);
+  const router = await buildRouter(cwd, traceSink);
   return router.run(rest);
 }
