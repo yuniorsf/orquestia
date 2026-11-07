@@ -1,6 +1,6 @@
 import type { SpecialistBranch } from '../planning/types.js';
 
-export type AgentName = 'antigravity' | 'claude_code' | 'copilot_cli';
+export type AgentName = 'antigravity' | 'claude_code' | 'copilot_cli' | 'ollama';
 
 export interface AgentInvocationRequest {
   readonly branch: SpecialistBranch;
@@ -24,6 +24,17 @@ export interface AgentCliSpec {
   readonly name: AgentName;
   readonly executable: string;
   buildArgs(request: AgentInvocationRequest): readonly string[];
+}
+
+/**
+ * Parallel to {@link AgentCliSpec}, but for an agent dispatched over HTTP
+ * (an OpenAI-compatible chat/completions endpoint — Ollama's local `/v1`
+ * API today) rather than a CLI subprocess.
+ */
+export interface OpenAiCompatibleEndpoint {
+  readonly name: AgentName;
+  readonly baseUrl: string;
+  readonly model: string;
 }
 
 /** `agents.branch_2a` / `agents.branch_2b` from `orquestia.config.yaml`. */
