@@ -122,21 +122,16 @@ layers:
     strategy: 'least_cost'
     primary_fallback: true
     providers:
-      - name: 'local_ollama_coder'
-        provider: 'ollama'
-        base_url: 'http://localhost:11434/v1' # Ollama's documented local default
-        model: 'qwen2.5-coder:7b' # matches `ollama list` on this machine; pull 32b for more headroom if desired
-        priority: 1
       - name: 'copilot_cli'
         provider: 'github_copilot'
         base_url: 'cli://github-copilot' # sentinel: dispatched via CLI, not HTTP
         model: 'copilot-cli-default' # sentinel: Copilot CLI doesn't expose a selectable model string here
-        priority: 2
+        priority: 1
       - name: 'claude_code_scaffolding_fallback'
         provider: 'claude_code'
         base_url: 'cli://claude-code'
         model: 'claude-sonnet-5-5'
-        priority: 3
+        priority: 2
 
   # Layer 3: Deterministic Oracle / Code Review (Phase 3)
   # Orquestia's review GATE is still script-driven (verify-solid-contracts.py
@@ -148,21 +143,16 @@ layers:
     strategy: 'quota_aware'
     primary_fallback: true
     providers:
-      - name: 'local_ollama_reviewer'
-        provider: 'ollama'
-        base_url: 'http://localhost:11434/v1'
-        model: 'qwen2.5-coder:7b' # matches `ollama list` on this machine; pull 32b for more headroom if desired
-        priority: 1
       - name: 'copilot_cli_review'
         provider: 'github_copilot'
         base_url: 'cli://github-copilot'
         model: 'copilot-cli-default'
-        priority: 2
+        priority: 1
       - name: 'claude_code_review_fallback'
         provider: 'claude_code'
         base_url: 'cli://claude-code'
         model: 'claude-sonnet-5-5'
-        priority: 3
+        priority: 2
 
   # Layer 4: Self-Healing Compile, Lint & Invariant Retries (Phase 4)
   self_healing_retries:
