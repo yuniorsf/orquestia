@@ -15,3 +15,4 @@ export {
 } from './synthesis-json-protocol.js';
 export { AgentCodeSynthesisDispatcher } from './agent-code-synthesis-dispatcher.js';
 export { AgentCodingRemediationDispatcher } from './agent-coding-remediation-dispatcher.js';
+export { ManifestConflictSelfHealingService } from './manifest-conflict-self-healing-service.js';

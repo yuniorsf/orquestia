@@ -2,6 +2,7 @@ import type { AgentRouter } from '../agents/agent-router.js';
 import { extractJsonObject } from '../shared/json-response-extractor.js';
 import type {
   FileManifestKind,
+  ManifestConflictRemediationDispatcherPort,
   SpecialistBranch,
   SpecialistDispatcherPort,
   SpecialistOutput,
@@ -37,6 +38,18 @@ function buildPrompt(branch: SpecialistBranch, taskId: string): string {
   return [
     `You are Branch ${branch} of the read-only Planning DAG for task "${taskId}".`,
     `Analyze the current repository and propose the ${branchRoleDescription(branch)} this task requires.`,
+    'Do not write or modify any files — this is read-only analysis.',
+    'Respond with ONLY a single JSON object, no markdown fences and no commentary, of this exact shape:',
+    '{"fileManifest":[{"path":"<repo-relative path>","kind":"NEW"|"MODIFY"}],"codeSnippets":["<snippet>", ...]}',
+  ].join('\n');
+}
+
+/** Always targets Branch 2B — matches `orquestia.config.yaml`'s own `planning_dag.gates.gate_1.remediate_with: 'branch_2b'` convention for a disjoint-ownership finding. */
+function buildManifestConflictPrompt(taskId: string, overlappingPaths: readonly string[]): string {
+  return [
+    `You are Branch 2B of the read-only Planning DAG for task "${taskId}".`,
+    `Your previous proposal included these paths, which Branch 2A has already claimed as its own — remove every one of them from your revised manifest: ${overlappingPaths.join(', ')}.`,
+    `Propose a revised ${branchRoleDescription('2B')} that does not include any of those paths.`,
     'Do not write or modify any files — this is read-only analysis.',
     'Respond with ONLY a single JSON object, no markdown fences and no commentary, of this exact shape:',
     '{"fileManifest":[{"path":"<repo-relative path>","kind":"NEW"|"MODIFY"}],"codeSnippets":["<snippet>", ...]}',
@@ -88,7 +101,9 @@ function parseSpecialistOutput(branch: SpecialistBranch, stdout: string): Specia
  * instructing it through the prompt to respond with exactly the JSON
  * shape of a {@link SpecialistOutput}.
  */
-export class AgentSpecialistDispatcher implements SpecialistDispatcherPort {
+export class AgentSpecialistDispatcher
+  implements SpecialistDispatcherPort, ManifestConflictRemediationDispatcherPort
+{
   constructor(
     private readonly agentRouter: AgentRouter,
     private readonly cwd: string,
@@ -101,5 +116,13 @@ export class AgentSpecialistDispatcher implements SpecialistDispatcherPort {
       prompt: buildPrompt(branch, this.taskId),
     });
     return parseSpecialistOutput(branch, result.stdout);
+  }
+
+  async remediate(overlappingPaths: readonly string[]): Promise<SpecialistOutput> {
+    const result = await this.agentRouter.dispatch('2B', {
+      cwd: this.cwd,
+      prompt: buildManifestConflictPrompt(this.taskId, overlappingPaths),
+    });
+    return parseSpecialistOutput('2B', result.stdout);
   }
 }

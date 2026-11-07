@@ -14,6 +14,7 @@ import type {
   FileExistencePort,
   FileManifestEntry,
   GitStatusPort,
+  ManifestConflictRemediationDispatcherPort,
   OracleStageName,
   OrquestiaConfig,
   ShipOutcome,
@@ -96,6 +97,21 @@ export class FakeSpecialistDispatcherPort implements SpecialistDispatcherPort {
   async dispatch(branch: SpecialistBranch): Promise<SpecialistOutput> {
     this.dispatchedBranches.push(branch);
     return this.outputs[branch];
+  }
+}
+
+export class FakeManifestConflictRemediationDispatcherPort implements ManifestConflictRemediationDispatcherPort {
+  readonly calls: Array<readonly string[]> = [];
+
+  constructor(private readonly outputs: readonly SpecialistOutput[]) {}
+
+  async remediate(overlappingPaths: readonly string[]): Promise<SpecialistOutput> {
+    this.calls.push(overlappingPaths);
+    const output = this.outputs[this.calls.length - 1];
+    if (!output) {
+      throw new Error('FakeManifestConflictRemediationDispatcherPort: no more outputs queued.');
+    }
+    return output;
   }
 }
 

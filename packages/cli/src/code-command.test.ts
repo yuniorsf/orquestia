@@ -8,6 +8,7 @@ import {
   FakeCodeShipService,
   FakeCodeSynthesisDispatcherPort,
   FakeCodingRemediationDispatcherPort,
+  FakeManifestConflictRemediationDispatcherPort,
   FakeSpecialistDispatcherPort,
   FakeWorktreeProvisioner,
 } from './test-builders.js';
@@ -39,6 +40,8 @@ function buildDeps(overrides?: Partial<CodeCommandDependencies>): CodeCommandDep
       }),
     planDispatcherFactory: () =>
       new FakeSpecialistDispatcherPort({ '2A': EMPTY_BRANCH_A, '2B': EMPTY_BRANCH_B }),
+    manifestConflictRemediationDispatcherFactory: () =>
+      new FakeManifestConflictRemediationDispatcherPort([EMPTY_BRANCH_B]),
     codeSynthesisDispatcherFactory: () => new FakeCodeSynthesisDispatcherPort(),
     remediationDispatcherFactory: () => new FakeCodingRemediationDispatcherPort(),
     oracleCommandsFactory: () => PASSING_COMMANDS,
@@ -101,16 +104,26 @@ describe('CodeCommand', () => {
     expect(result.stderr).toBe('Manifest decomposition failed for "ORQ-35": raw failure\n');
   });
 
-  it('reports a disjoint allocation error without provisioning a worktree', async () => {
+  it('reports a disjoint allocation error without provisioning a worktree when remediation stays exhausted', async () => {
     const provisioner = new FakeWorktreeProvisioner(() => WORKTREE);
+    const stillOverlapping: SpecialistOutput = {
+      branch: '2B',
+      fileManifest: [{ path: 'a.ts', kind: 'NEW' }],
+      codeSnippets: [],
+    };
+    const remediationDispatcher = new FakeManifestConflictRemediationDispatcherPort([
+      stillOverlapping,
+      stillOverlapping,
+    ]);
     const command = new CodeCommand(
       buildDeps({
         worktreeProvisioner: provisioner,
         planDispatcherFactory: () =>
           new FakeSpecialistDispatcherPort({
             '2A': { branch: '2A', fileManifest: [{ path: 'a.ts', kind: 'NEW' }], codeSnippets: [] },
-            '2B': { branch: '2B', fileManifest: [{ path: 'a.ts', kind: 'NEW' }], codeSnippets: [] },
+            '2B': stillOverlapping,
           }),
+        manifestConflictRemediationDispatcherFactory: () => remediationDispatcher,
       }),
     );
 
@@ -119,12 +132,61 @@ describe('CodeCommand', () => {
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain('Disjoint file allocation violated');
     expect(provisioner.created).toHaveLength(0);
+    // maxRetries: 2 inside CodeCommand — both attempts exhausted, each told about the same overlap.
+    expect(remediationDispatcher.calls).toEqual([['a.ts'], ['a.ts']]);
+  });
+
+  it('provisions the worktree with the healed manifest once remediation resolves the overlap', async () => {
+    const provisioner = new FakeWorktreeProvisioner(() => WORKTREE);
+    const healed: SpecialistOutput = {
+      branch: '2B',
+      fileManifest: [{ path: 'b.test.ts', kind: 'NEW' }],
+      codeSnippets: [],
+    };
+    const remediationDispatcher = new FakeManifestConflictRemediationDispatcherPort([healed]);
+    const command = new CodeCommand(
+      buildDeps({
+        worktreeProvisioner: provisioner,
+        planDispatcherFactory: () =>
+          new FakeSpecialistDispatcherPort({
+            '2A': { branch: '2A', fileManifest: [{ path: 'a.ts', kind: 'NEW' }], codeSnippets: [] },
+            '2B': { branch: '2B', fileManifest: [{ path: 'a.ts', kind: 'NEW' }], codeSnippets: [] },
+          }),
+        manifestConflictRemediationDispatcherFactory: () => remediationDispatcher,
+      }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result.exitCode).toBe(0);
+    expect(remediationDispatcher.calls).toEqual([['a.ts']]);
+    expect(provisioner.created).toEqual([{ taskId: 'ORQ-35', baseRef: 'origin/develop' }]);
+  });
+
+  it('skips remediation entirely when the initial manifests are already disjoint', async () => {
+    const remediationDispatcher = new FakeManifestConflictRemediationDispatcherPort([]);
+    const command = new CodeCommand(
+      buildDeps({ manifestConflictRemediationDispatcherFactory: () => remediationDispatcher }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result.exitCode).toBe(0);
+    expect(remediationDispatcher.calls).toEqual([]);
   });
 
   it("FakeWorktreeProvisioner.destroy is a no-op (CodeCommand never calls it — cleanup is the orchestration layer's job)", async () => {
     const provisioner = new FakeWorktreeProvisioner(() => WORKTREE);
 
     await expect(provisioner.destroy()).resolves.toBeUndefined();
+  });
+
+  it('FakeManifestConflictRemediationDispatcherPort throws once its queued outputs run out', async () => {
+    const dispatcher = new FakeManifestConflictRemediationDispatcherPort([]);
+
+    await expect(dispatcher.remediate(['a.ts'])).rejects.toThrow(
+      'FakeManifestConflictRemediationDispatcherPort: no more outputs queued.',
+    );
   });
 
   it('FakeCliCommandRunnerPort throws for a command with no configured result', async () => {

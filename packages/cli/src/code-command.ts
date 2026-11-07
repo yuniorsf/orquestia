@@ -6,6 +6,7 @@ import type {
   CodingSelfHealOutcome,
   CodingTaskManifest,
   CommandRunnerPort,
+  ManifestConflictRemediationDispatcherPort,
   OracleCommands,
   RebaseAndVerifyResult,
   ShipOutcome,
@@ -21,6 +22,7 @@ import {
   CodingTaskProvisioningService,
   DisjointAllocationError,
   DisjointAllocationValidator,
+  ManifestConflictSelfHealingService,
   PlanDispatchService,
   RebaseAndReverifyService,
 } from '@orquestia/core';
@@ -36,6 +38,9 @@ export interface CodeCommandDependencies {
   readonly checkpointFactory: (worktree: WorktreeHandle) => CheckpointPort;
   readonly commandRunnerFactory: (worktree: WorktreeHandle) => CommandRunnerPort;
   readonly planDispatcherFactory: (taskId: string) => SpecialistDispatcherPort;
+  readonly manifestConflictRemediationDispatcherFactory: (
+    taskId: string,
+  ) => ManifestConflictRemediationDispatcherPort;
   readonly codeSynthesisDispatcherFactory: () => CodeSynthesisDispatcherPort;
   readonly remediationDispatcherFactory: (
     worktree: WorktreeHandle,
@@ -61,7 +66,9 @@ function formatSelfHeal(outcome: CodingSelfHealOutcome): string {
 /**
  * `orquestia code <taskId> [--ship]` — the full 5-phase Coding DAG:
  * decides the file manifest by reusing the Planning DAG's specialist
- * dispatch (ORQ-34), provisions an isolated worktree, dispatches real
+ * dispatch (ORQ-34), with a bounded informed-retry pass on a disjoint-
+ * ownership collision before provisioning (ORQ-49), provisions an
+ * isolated worktree, dispatches real
  * code synthesis (agents generate file contents as JSON; the dispatcher
  * writes them — no unsupervised tool access), runs the 4-stage
  * Deterministic Oracle with bounded self-healing, rebases onto
@@ -181,7 +188,20 @@ export class CodeCommand implements CliCommand {
   private async decideManifest(taskId: string): Promise<CodingTaskManifest> {
     const dispatcher = this.deps.planDispatcherFactory(taskId);
     const { branchA, branchB } = await new PlanDispatchService(dispatcher).dispatchBoth();
-    return { coreLogicSpec: branchA.fileManifest, testAndBoilerplateSpec: branchB.fileManifest };
+
+    // ORQ-49: 2A/2B decide independently and in parallel, with no
+    // visibility into each other's claims — give 2B a bounded, informed
+    // retry (told exactly which paths 2A already has) before falling
+    // through to CodingTaskProvisioningService's own DisjointAllocationError.
+    const remediationDispatcher = this.deps.manifestConflictRemediationDispatcherFactory(taskId);
+    const healed = await new ManifestConflictSelfHealingService(remediationDispatcher, {
+      maxRetries: 2,
+    }).run(branchA, branchB);
+
+    return {
+      coreLogicSpec: healed.branchA.fileManifest,
+      testAndBoilerplateSpec: healed.branchB.fileManifest,
+    };
   }
 
   private async rebaseAndReverify(
