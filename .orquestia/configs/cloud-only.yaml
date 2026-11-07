@@ -1,0 +1,43 @@
+# Example --config profile: prefers cloud/CLI-subscription agents
+# (Antigravity, Claude Code, GitHub Copilot) and never routes to the local
+# Ollama server — the opposite of local-only.yaml. Useful on a machine
+# without Ollama running, or to deliberately exercise Antigravity.
+#
+# Select with: orquestia plan --config cloud-only <taskId>
+#          or: orquestia code --config cloud-only <taskId>
+
+version: '3.0'
+project_name: 'Orquestia (cloud-only profile)'
+
+layers:
+  planning_architecture:
+    enabled: true
+    strategy: 'quota_aware'
+    primary_fallback: true
+    providers:
+      - name: 'antigravity_orchestrator'
+        provider: 'antigravity'
+        base_url: 'cli://google-antigravity'
+        model: 'antigravity-default'
+        priority: 1
+      - name: 'claude_code_fallback'
+        provider: 'claude_code'
+        base_url: 'cli://claude-code'
+        model: 'claude-opus-5-5'
+        priority: 2
+
+  coding_scaffolding_tests:
+    enabled: true
+    strategy: 'least_cost'
+    primary_fallback: true
+    providers:
+      - name: 'copilot_cli'
+        provider: 'github_copilot'
+        base_url: 'cli://github-copilot'
+        model: 'copilot-cli-default'
+        priority: 1
+      - name: 'claude_code_fallback'
+        provider: 'claude_code'
+        base_url: 'cli://claude-code'
+        model: 'claude-sonnet-5-5'
+        priority: 2
