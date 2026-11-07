@@ -24,6 +24,16 @@ export interface AgentCliSpec {
   readonly name: AgentName;
   readonly executable: string;
   buildArgs(request: AgentInvocationRequest): readonly string[];
+  /**
+   * Post-processes the raw subprocess stdout into the agent's actual answer
+   * text, before `extractJsonObject`/`JSON.parse` ever sees it. Identity
+   * when absent (the common case: `claude`/`copilot`'s raw stdout already
+   * *is* the answer). Exists because some CLIs' structured output modes
+   * wrap the answer in an envelope — e.g. `agy --output-format json`
+   * returns `{"status":...,"response":"<answer>",...}`, not the answer
+   * itself.
+   */
+  extractResponse?(rawStdout: string): string;
 }
 
 /**

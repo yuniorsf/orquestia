@@ -35,13 +35,39 @@ describe('antigravityCliSpec', () => {
     expect(antigravityCliSpec.executable).toBe('agy');
   });
 
-  it('passes the prompt via -p plus --mode plan --dangerously-skip-permissions', () => {
+  it('passes the prompt via -p plus --mode plan --dangerously-skip-permissions --output-format json', () => {
     expect(antigravityCliSpec.buildArgs(request)).toEqual([
       '-p',
       request.prompt,
       '--mode',
       'plan',
       '--dangerously-skip-permissions',
+      '--output-format',
+      'json',
     ]);
+  });
+
+  describe('extractResponse', () => {
+    it('unwraps the "response" field from a successful agy --output-format json envelope', () => {
+      const rawStdout = JSON.stringify({
+        conversation_id: 'abc',
+        status: 'SUCCESS',
+        response: '{"fileManifest":[],"codeSnippets":[]}\n',
+      });
+
+      expect(antigravityCliSpec.extractResponse?.(rawStdout)).toBe(
+        '{"fileManifest":[],"codeSnippets":[]}\n',
+      );
+    });
+
+    it('falls back to the raw text unchanged when it is not valid JSON', () => {
+      expect(antigravityCliSpec.extractResponse?.('not json at all')).toBe('not json at all');
+    });
+
+    it('falls back to the raw text unchanged when "response" is missing or not a string', () => {
+      const rawStdout = JSON.stringify({ status: 'ERROR', conversation_id: 'abc' });
+
+      expect(antigravityCliSpec.extractResponse?.(rawStdout)).toBe(rawStdout);
+    });
   });
 });
