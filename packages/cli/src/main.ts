@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -30,6 +31,7 @@ import { AuthCommand } from './auth-command.js';
 import { CodeCommand } from './code-command.js';
 import { buildCodeCommandDependencies, REPO_BASE_REF } from './code-command-wiring.js';
 import { CommandRouter } from './command-router.js';
+import { parseConfigSelector, resolveConfigPath } from './config-profile.js';
 import { ConsoleTraceSink, type VerbosityLevel } from './console-trace-sink.js';
 import { ChildProcessDaemonLauncher } from './daemon-process-launcher.js';
 import { PlanCommand } from './plan-command.js';
@@ -94,24 +96,36 @@ export function parseVerbosity(argv: readonly string[]): {
 }
 
 /**
- * Reads `<cwd>/orquestia.config.yaml`'s `layers:` section and resolves it
- * to an `AgentRoutingConfig`, falling back to `DEFAULT_AGENT_ROUTING`
- * whenever the file is absent, its `layers:` section is malformed, or a
- * layer doesn't resolve to a registered agent — mirrors `PlanCommand`'s own
+ * Reads `configPath`'s `layers:` section and resolves it to an
+ * `AgentRoutingConfig`, falling back to `DEFAULT_AGENT_ROUTING` whenever
+ * the file is absent, its `layers:` section is malformed, or a layer
+ * doesn't resolve to a registered agent — mirrors `PlanCommand`'s own
  * `loadConfigOrDefault` fallback-on-failure convention, since this must
  * stay non-fatal for `cwd`s (fixtures, fresh projects) with no config file.
+ * An explicitly-named but missing `--config` profile is handled earlier,
+ * in `runCli`, with a loud failure — this fallback is for the (common,
+ * expected) no-config-at-all case.
  */
-async function loadAgentRoutingConfig(cwd: string): Promise<AgentRoutingConfig> {
+async function loadAgentRoutingConfig(configPath: string): Promise<AgentRoutingConfig> {
   try {
-    const config = await new YamlConfigReader(join(cwd, 'orquestia.config.yaml')).loadConfig();
+    const config = await new YamlConfigReader(configPath).loadConfig();
     return resolveAgentRoutingConfig(parseLayerPoolsConfig(config.raw), DEFAULT_AGENT_ROUTING);
   } catch {
     return DEFAULT_AGENT_ROUTING;
   }
 }
 
-/** Wires the full `orquestia` command surface against `<cwd>/.orquestia/`. */
-export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promise<CommandRouter> {
+/**
+ * Wires the full `orquestia` command surface against `<cwd>/.orquestia/`.
+ * `configPath` defaults to `<cwd>/orquestia.config.yaml` (today's
+ * unchanged behavior) — pass a resolved `.orquestia/configs/<name>.yaml`
+ * path (see `resolveConfigPath`) to use a named profile instead.
+ */
+export async function buildRouter(
+  cwd: string,
+  traceSink?: TraceSinkPort,
+  configPath: string = join(cwd, 'orquestia.config.yaml'),
+): Promise<CommandRouter> {
   const stateStore = new JsonFileApprovalStateStore(join(cwd, '.orquestia', 'state.json'));
   const manager = new DurableApprovalManager(
     stateStore,
@@ -120,7 +134,7 @@ export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promi
     DEFAULT_GATE_MODES,
   );
 
-  const agentRoutingConfig = await loadAgentRoutingConfig(cwd);
+  const agentRoutingConfig = await loadAgentRoutingConfig(configPath);
   const agentRouter = new AgentRouter(
     [
       new CliProcessAgentAdapter(claudeCodeCliSpec),
@@ -134,7 +148,7 @@ export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promi
   );
   const planCommand = new PlanCommand(
     new GitStatusSnapshotter(cwd),
-    new YamlConfigReader(join(cwd, 'orquestia.config.yaml')),
+    new YamlConfigReader(configPath),
     new FsFileExistencePort(),
     buildPlanDispatcherFactory(cwd, agentRouter),
   );
@@ -175,10 +189,37 @@ export async function buildRouter(cwd: string, traceSink?: TraceSinkPort): Promi
   ]);
 }
 
+/** `resolveConfigPath` only ever throws a real `Error`, but this stays defensive and independently testable rather than assuming that forever. */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export async function runCli(argv: readonly string[], cwd: string): Promise<CommandResult> {
-  const { level, rest } = parseVerbosity(argv);
+  const { level, rest: afterVerbosity } = parseVerbosity(argv);
+  const { profile, rest } = parseConfigSelector(afterVerbosity);
+
+  let configPath: string;
+  try {
+    configPath = resolveConfigPath(cwd, profile);
+  } catch (error) {
+    return { exitCode: 1, stdout: '', stderr: `${errorMessage(error)}\n` };
+  }
+
+  // Unspecified --config silently falls back to defaults elsewhere (no
+  // orquestia.config.yaml is a normal, expected state for a fresh
+  // project) — but a profile the user explicitly named should fail
+  // loudly if it doesn't exist, not silently behave as if it were never
+  // passed.
+  if (profile !== undefined && !existsSync(configPath)) {
+    return {
+      exitCode: 1,
+      stdout: '',
+      stderr: `Config profile "${profile}" not found: ${configPath}\n`,
+    };
+  }
+
   const traceSink =
     level > 0 ? new ConsoleTraceSink(level, (line) => process.stderr.write(line)) : undefined;
-  const router = await buildRouter(cwd, traceSink);
+  const router = await buildRouter(cwd, traceSink, configPath);
   return router.run(rest);
 }

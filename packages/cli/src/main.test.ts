@@ -1,8 +1,18 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { parseVerbosity, runCli } from './main.js';
+import { errorMessage, parseVerbosity, runCli } from './main.js';
+
+describe('errorMessage', () => {
+  it("returns an Error's own message", () => {
+    expect(errorMessage(new Error('boom'))).toBe('boom');
+  });
+
+  it('stringifies a non-Error thrown value', () => {
+    expect(errorMessage('raw string')).toBe('raw string');
+  });
+});
 
 describe('parseVerbosity', () => {
   it('defaults to level 0 and leaves argv untouched when no flag is present', () => {
@@ -115,6 +125,59 @@ describe('runCli', () => {
     );
 
     const result = await runCli(['--help'], cwd);
+
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('reads a named --config profile from .orquestia/configs/<name>.yaml instead of the default', async () => {
+    await mkdir(join(cwd, '.orquestia', 'configs'), { recursive: true });
+    await writeFile(
+      join(cwd, '.orquestia', 'configs', 'staging.yaml'),
+      "version: '1.0'\nproject_name: 'staging-fixture'\n",
+      'utf8',
+    );
+
+    const result = await runCli(['--config', 'staging', '--help'], cwd);
+
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('fails loudly, naming the expected path, when an explicit --config profile does not exist', async () => {
+    const result = await runCli(['--config', 'does-not-exist', '--help'], cwd);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Config profile "does-not-exist" not found');
+    expect(result.stderr).toContain(join('.orquestia', 'configs', 'does-not-exist.yaml'));
+  });
+
+  it('rejects an invalid --config profile name without touching the filesystem', async () => {
+    const result = await runCli(['--config', '../escape', '--help'], cwd);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Invalid config profile name "../escape"');
+  });
+
+  it('omitting --config still reads the default orquestia.config.yaml unchanged', async () => {
+    await writeFile(
+      join(cwd, 'orquestia.config.yaml'),
+      "version: '1.0'\nproject_name: 'default-fixture'\n",
+      'utf8',
+    );
+
+    const result = await runCli(['--help'], cwd);
+
+    expect(result.exitCode).toBe(0);
+  });
+
+  it('composes with -v regardless of flag order', async () => {
+    await mkdir(join(cwd, '.orquestia', 'configs'), { recursive: true });
+    await writeFile(
+      join(cwd, '.orquestia', 'configs', 'staging.yaml'),
+      "version: '1.0'\nproject_name: 'staging-fixture'\n",
+      'utf8',
+    );
+
+    const result = await runCli(['-v', '--config', 'staging', '--help'], cwd);
 
     expect(result.exitCode).toBe(0);
   });

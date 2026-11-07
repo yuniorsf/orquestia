@@ -1,0 +1,46 @@
+# Example --config profile: prefers local/offline providers everywhere a
+# registered agent exists for one, so `orquestia plan/code --config local-only
+# <taskId>` can run with no network calls to any cloud CLI subscription.
+#
+# Select with: orquestia plan --config local-only <taskId>
+#          or: orquestia code --config local-only <taskId>
+#
+# Falls back to claude_code/copilot_cli automatically if ollama's local
+# server isn't actually running — resolveAgentRoutingConfig only checks
+# that a provider is *registered*, not that it's currently reachable.
+
+version: '3.0'
+project_name: 'Orquestia (local-only profile)'
+
+layers:
+  planning_architecture:
+    enabled: true
+    strategy: 'least_cost'
+    primary_fallback: true
+    providers:
+      - name: 'local_ollama_planner'
+        provider: 'ollama'
+        base_url: 'http://localhost:11434/v1'
+        model: 'qwen2.5-coder:7b'
+        priority: 1
+      - name: 'claude_code_fallback'
+        provider: 'claude_code'
+        base_url: 'cli://claude-code'
+        model: 'claude-sonnet-5-5'
+        priority: 2
+
+  coding_scaffolding_tests:
+    enabled: true
+    strategy: 'least_cost'
+    primary_fallback: true
+    providers:
+      - name: 'local_ollama_coder'
+        provider: 'ollama'
+        base_url: 'http://localhost:11434/v1'
+        model: 'qwen2.5-coder:7b'
+        priority: 1
+      - name: 'copilot_cli_fallback'
+        provider: 'github_copilot'
+        base_url: 'cli://github-copilot'
+        model: 'copilot-cli-default'
+        priority: 2
