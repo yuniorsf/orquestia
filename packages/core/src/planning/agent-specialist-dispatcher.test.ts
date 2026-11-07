@@ -125,4 +125,36 @@ describe('AgentSpecialistDispatcher', () => {
 
     await expect(dispatcher.dispatch('2A')).rejects.toThrow(MalformedSpecialistOutputError);
   });
+
+  describe('remediate', () => {
+    it('always dispatches Branch 2B, naming the overlapping paths in the prompt', async () => {
+      const adapterB = new FakeAgentAdapter(
+        'copilot_cli',
+        jsonOutput('{"fileManifest":[{"path":"b.test.ts","kind":"NEW"}],"codeSnippets":[]}'),
+      );
+      const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
+      const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
+
+      const output = await dispatcher.remediate(['a.ts', 'b.ts']);
+
+      expect(output).toEqual({
+        branch: '2B',
+        fileManifest: [{ path: 'b.test.ts', kind: 'NEW' }],
+        codeSnippets: [],
+      });
+      expect(adapterB.calls[0]).toEqual({
+        branch: '2B',
+        cwd: '/repo',
+        prompt: expect.stringContaining('a.ts, b.ts'),
+      });
+    });
+
+    it('throws MalformedSpecialistOutputError on an invalid remediation response, same as dispatch', async () => {
+      const adapterB = new FakeAgentAdapter('copilot_cli', jsonOutput('not json'));
+      const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
+      const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
+
+      await expect(dispatcher.remediate(['a.ts'])).rejects.toThrow(MalformedSpecialistOutputError);
+    });
+  });
 });

@@ -97,6 +97,18 @@ export interface RemediationDispatcherPort {
   remediate(branch: SpecialistBranch, findings: readonly GateFinding[]): Promise<SpecialistOutput>;
 }
 
+/**
+ * Coding DAG Phase 1 addendum (ORQ-49): when Branch 2A and 2B's independent,
+ * parallel manifests overlap, re-dispatches Branch 2B — the owner of record
+ * for disjoint-scope remediation, per `orquestia.config.yaml`'s
+ * `planning_dag.gates.gate_1` convention — with explicit visibility into
+ * which paths 2A already claimed, so it can actually avoid them instead of
+ * guessing blind a second time.
+ */
+export interface ManifestConflictRemediationDispatcherPort {
+  remediate(overlappingPaths: readonly string[]): Promise<SpecialistOutput>;
+}
+
 export interface SelfHealConfig {
   readonly maxRetries: number;
 }

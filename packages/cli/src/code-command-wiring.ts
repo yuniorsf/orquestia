@@ -60,6 +60,8 @@ export function buildCodeCommandDependencies(
     checkpointFactory: (worktree) => new GitStashCheckpoint(worktree.path),
     commandRunnerFactory: (worktree) => new ShellCommandRunner(worktree.path),
     planDispatcherFactory: (taskId) => new AgentSpecialistDispatcher(agentRouter, cwd, taskId),
+    manifestConflictRemediationDispatcherFactory: (taskId) =>
+      new AgentSpecialistDispatcher(agentRouter, cwd, taskId),
     codeSynthesisDispatcherFactory: () =>
       new AgentCodeSynthesisDispatcher(agentRouter, new FsFileWriter()),
     remediationDispatcherFactory: (worktree, commandRunner, oracleCommands) =>
