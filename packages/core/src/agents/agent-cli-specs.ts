@@ -4,11 +4,35 @@ function promptArgs(request: AgentInvocationRequest): readonly string[] {
   return ['-p', request.prompt];
 }
 
-/** `claude -p "<prompt>"`, run with the process `cwd` set to the task worktree. */
+/**
+ * `claude -p "<prompt>" --permission-mode plan --permission-prompts none`,
+ * run with the process `cwd` set to the task worktree.
+ *
+ * Every dispatch prompt (planning, synthesis, remediation) already tells
+ * the agent "do not use any tools" / "this is read-only analysis," but
+ * that alone is only a request, not an enforced restriction — a plain
+ * `claude -p` invocation inherits whatever this project's own
+ * `.claude/settings.json` allow-rules already permit. Confirmed live: a
+ * remediation dispatch used real tool calls (`git show`, file edits)
+ * against the worktree instead of responding with the required JSON text,
+ * rewriting hundreds of lines of pre-existing files — exactly the
+ * "unsupervised tool access" this architecture assumes never happens
+ * (see `code-command.ts`'s own doc comment). `--permission-mode plan`
+ * blocks file mutation while still returning a plain-text answer;
+ * `--permission-prompts none` denies anything that would otherwise
+ * prompt instead of hanging (no TTY in a headless dispatch) or silently
+ * inheriting an ambient allow-rule.
+ */
 export const claudeCodeCliSpec: AgentCliSpec = {
   name: 'claude_code',
   executable: 'claude',
-  buildArgs: promptArgs,
+  buildArgs: (request) => [
+    ...promptArgs(request),
+    '--permission-mode',
+    'plan',
+    '--permission-prompts',
+    'none',
+  ],
 };
 
 /**

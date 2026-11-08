@@ -12,7 +12,22 @@ describe('claudeCodeCliSpec', () => {
   it('names the claude executable and passes the prompt via -p', () => {
     expect(claudeCodeCliSpec.name).toBe('claude_code');
     expect(claudeCodeCliSpec.executable).toBe('claude');
-    expect(claudeCodeCliSpec.buildArgs(request)).toEqual(['-p', request.prompt]);
+    expect(claudeCodeCliSpec.buildArgs(request)).toEqual([
+      '-p',
+      request.prompt,
+      '--permission-mode',
+      'plan',
+      '--permission-prompts',
+      'none',
+    ]);
+  });
+
+  it('restricts the dispatch to read-only plan mode (ORQ-54) — no unsupervised tool access', () => {
+    const args = claudeCodeCliSpec.buildArgs(request);
+    expect(args).toContain('--permission-mode');
+    expect(args[args.indexOf('--permission-mode') + 1]).toBe('plan');
+    expect(args).toContain('--permission-prompts');
+    expect(args[args.indexOf('--permission-prompts') + 1]).toBe('none');
   });
 });
 
