@@ -20,6 +20,7 @@ export default defineConfig({
         'packages/cli/src/sea-entry.ts',
         'packages/cli/src/code-command-wiring.ts',
         'packages/cli/src/plan-command-wiring.ts',
+        'packages/cli/src/implement-command-wiring.ts',
         'packages/cli/src/queue-daemon.ts',
         'packages/vscode-extension/src/extension.ts',
         'packages/vscode-extension/src/run-bundle.ts',

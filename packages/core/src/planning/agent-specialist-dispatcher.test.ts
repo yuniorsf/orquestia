@@ -56,6 +56,51 @@ describe('AgentSpecialistDispatcher', () => {
     expect(adapterB.calls[0]?.prompt).not.toContain('register or wire it in');
   });
 
+  it('defaults taskDescription to taskId when omitted (ORQ-47) — unchanged plan/code behavior', async () => {
+    const adapterA = new FakeAgentAdapter(
+      'claude_code',
+      jsonOutput('{"fileManifest":[],"codeSnippets":[]}'),
+    );
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
+    const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34');
+
+    await dispatcher.dispatch('2A');
+
+    expect(adapterA.calls[0]?.prompt).toContain('task "ORQ-34"');
+  });
+
+  it('uses the free-text taskDescription instead of taskId when provided (ORQ-47)', async () => {
+    const adapterA = new FakeAgentAdapter(
+      'claude_code',
+      jsonOutput('{"fileManifest":[],"codeSnippets":[]}'),
+    );
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
+    const dispatcher = new AgentSpecialistDispatcher(
+      router,
+      '/repo',
+      'ORQ-34',
+      'add a retry flag to the client',
+    );
+
+    await dispatcher.dispatch('2A');
+
+    expect(adapterA.calls[0]?.prompt).toContain('task "add a retry flag to the client"');
+    expect(adapterA.calls[0]?.prompt).not.toContain('task "ORQ-34"');
+  });
+
+  it('uses taskDescription, not taskId, in remediate prompts too (ORQ-47)', async () => {
+    const adapterB = new FakeAgentAdapter(
+      'copilot_cli',
+      jsonOutput('{"fileManifest":[],"codeSnippets":[]}'),
+    );
+    const router = new AgentRouter([adapterB], ROUTING, new FakeClock());
+    const dispatcher = new AgentSpecialistDispatcher(router, '/repo', 'ORQ-34', 'free text task');
+
+    await dispatcher.remediate(['a.ts']);
+
+    expect(adapterB.calls[0]?.prompt).toContain('task "free text task"');
+  });
+
   it('strips a ```json markdown fence before parsing', async () => {
     const adapterB = new FakeAgentAdapter(
       'copilot_cli',
