@@ -135,12 +135,22 @@ export class CodeCommand implements CliCommand {
       oracleCommands,
     );
 
-    const selfHeal = await new CodingSelfHealingService(
-      new CodingOracleRunner(commandRunner),
-      this.deps.checkpointFactory(worktree),
-      remediationDispatcher,
-      { maxRetries: this.deps.maxSelfHealRetries },
-    ).run(oracleCommands);
+    let selfHeal: CodingSelfHealOutcome;
+    try {
+      selfHeal = await new CodingSelfHealingService(
+        new CodingOracleRunner(commandRunner),
+        this.deps.checkpointFactory(worktree),
+        remediationDispatcher,
+        { maxRetries: this.deps.maxSelfHealRetries },
+      ).run(oracleCommands);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return {
+        exitCode: 2,
+        stdout: `Self-healing remediation failed for "${taskId}": ${message}\nWorktree left at ${worktree.path} for inspection.\n`,
+        stderr: '',
+      };
+    }
 
     if (selfHeal.status !== 'passed') {
       return {

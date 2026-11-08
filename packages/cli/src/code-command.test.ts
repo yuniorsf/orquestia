@@ -278,6 +278,62 @@ describe('CodeCommand', () => {
     expect(result.stdout).toContain('Worktree left at /worktrees/ORQ-35 for inspection.');
   });
 
+  it('reports a clean failure instead of crashing when self-heal remediation throws (ORQ-55)', async () => {
+    const commandRunner = new FakeCliCommandRunnerPort({
+      [PASSING_COMMANDS.solidPreflight]: { exitCode: 1, stdout: '', stderr: 'scope drift' },
+      [PASSING_COMMANDS.formatCheck]: OK,
+      [PASSING_COMMANDS.buildAndLint]: OK,
+      [PASSING_COMMANDS.testRun]: OK,
+    });
+    const command = new CodeCommand(
+      buildDeps({
+        commandRunnerFactory: () => commandRunner,
+        remediationDispatcherFactory: () => ({
+          remediate: async () => {
+            throw new Error(
+              'Branch 2A synthesis returned malformed output: response was not valid JSON.',
+            );
+          },
+        }),
+      }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result).toEqual({
+      exitCode: 2,
+      stdout:
+        'Self-healing remediation failed for "ORQ-35": Branch 2A synthesis returned malformed output: response was not valid JSON.\nWorktree left at /worktrees/ORQ-35 for inspection.\n',
+      stderr: '',
+    });
+  });
+
+  it('stringifies a non-Error throw from self-heal remediation', async () => {
+    const commandRunner = new FakeCliCommandRunnerPort({
+      [PASSING_COMMANDS.solidPreflight]: { exitCode: 1, stdout: '', stderr: 'scope drift' },
+      [PASSING_COMMANDS.formatCheck]: OK,
+      [PASSING_COMMANDS.buildAndLint]: OK,
+      [PASSING_COMMANDS.testRun]: OK,
+    });
+    const command = new CodeCommand(
+      buildDeps({
+        commandRunnerFactory: () => commandRunner,
+        remediationDispatcherFactory: () => ({
+          remediate: async () => {
+            throw 'raw remediation failure';
+          },
+        }),
+      }),
+    );
+
+    const result = await command.run(['ORQ-35']);
+
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toContain(
+      'Self-healing remediation failed for "ORQ-35": raw remediation failure',
+    );
+  });
+
   it('exits 2 when the post-oracle rebase conflicts', async () => {
     const commandRunner = new FakeCliCommandRunnerPort({
       [PASSING_COMMANDS.solidPreflight]: OK,
