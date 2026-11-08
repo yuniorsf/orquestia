@@ -19,6 +19,8 @@ describe('claudeCodeCliSpec', () => {
       'plan',
       '--permission-prompts',
       'none',
+      '--disallowedTools',
+      'Bash,Edit,Write,NotebookEdit,Agent',
     ]);
   });
 
@@ -28,6 +30,15 @@ describe('claudeCodeCliSpec', () => {
     expect(args[args.indexOf('--permission-mode') + 1]).toBe('plan');
     expect(args).toContain('--permission-prompts');
     expect(args[args.indexOf('--permission-prompts') + 1]).toBe('none');
+  });
+
+  it('denies Bash/Edit/Write/NotebookEdit/Agent at the tool level, not just via permission mode (ORQ-56)', () => {
+    const args = claudeCodeCliSpec.buildArgs(request);
+    expect(args).toContain('--disallowedTools');
+    const denied = args[args.indexOf('--disallowedTools') + 1];
+    for (const tool of ['Bash', 'Edit', 'Write', 'NotebookEdit', 'Agent']) {
+      expect(denied).toContain(tool);
+    }
   });
 });
 
