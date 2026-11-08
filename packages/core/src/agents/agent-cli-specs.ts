@@ -5,23 +5,30 @@ function promptArgs(request: AgentInvocationRequest): readonly string[] {
 }
 
 /**
- * `claude -p "<prompt>" --permission-mode plan --permission-prompts none`,
- * run with the process `cwd` set to the task worktree.
+ * `claude -p "<prompt>" --permission-mode plan --permission-prompts none
+ * --disallowedTools "Bash,Edit,Write,NotebookEdit,Agent"`, run with the
+ * process `cwd` set to the task worktree.
  *
  * Every dispatch prompt (planning, synthesis, remediation) already tells
  * the agent "do not use any tools" / "this is read-only analysis," but
- * that alone is only a request, not an enforced restriction — a plain
- * `claude -p` invocation inherits whatever this project's own
- * `.claude/settings.json` allow-rules already permit. Confirmed live: a
- * remediation dispatch used real tool calls (`git show`, file edits)
- * against the worktree instead of responding with the required JSON text,
- * rewriting hundreds of lines of pre-existing files — exactly the
- * "unsupervised tool access" this architecture assumes never happens
- * (see `code-command.ts`'s own doc comment). `--permission-mode plan`
- * blocks file mutation while still returning a plain-text answer;
- * `--permission-prompts none` denies anything that would otherwise
- * prompt instead of hanging (no TTY in a headless dispatch) or silently
- * inheriting an ambient allow-rule.
+ * that alone is only a request, not an enforced restriction (see
+ * `code-command.ts`'s own doc comment: "no unsupervised tool access").
+ * `--permission-mode plan` alone (ORQ-54) correctly blocks every short,
+ * direct test — but confirmed live not to hold over a longer, more
+ * ambiguous dispatch: Branch 2A explored at length, spawned background
+ * subagents, and ended up with real, substantive edits to pre-existing
+ * files before finally giving up and answering in prose instead of the
+ * required JSON (ORQ-56). `--disallowedTools` closes that gap at the
+ * tool level, independent of session length or "mode" semantics:
+ * `Bash` can mutate files directly even with Edit/Write denied (`echo ...
+ * > file`); the subagent-spawning tool in this environment is named
+ * `Agent`, not the more commonly assumed `Task`. Confirmed against a
+ * deliberately adversarial repro (ambiguous pre-existing files, an
+ * explicit invitation to explore at length and spawn subagents) that this
+ * combination still returns a clean JSON response with zero file
+ * mutation. `--permission-prompts none` denies anything that would
+ * otherwise prompt instead of hanging (no TTY in a headless dispatch) or
+ * silently inheriting an ambient allow-rule.
  */
 export const claudeCodeCliSpec: AgentCliSpec = {
   name: 'claude_code',
@@ -32,6 +39,8 @@ export const claudeCodeCliSpec: AgentCliSpec = {
     'plan',
     '--permission-prompts',
     'none',
+    '--disallowedTools',
+    'Bash,Edit,Write,NotebookEdit,Agent',
   ],
 };
 
