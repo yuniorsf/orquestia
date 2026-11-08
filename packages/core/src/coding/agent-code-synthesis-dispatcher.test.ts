@@ -33,6 +33,42 @@ describe('AgentCodeSynthesisDispatcher', () => {
     expect(adapterA.calls[0]?.prompt).toContain('[NEW] src/foo.ts');
   });
 
+  it('omits any task description from the prompt when none is given (ORQ-47) — unchanged code behavior', async () => {
+    const adapterA = new FakeAgentAdapter(
+      'claude_code',
+      jsonOutput('{"files":[{"path":"src/foo.ts","content":"x"}]}'),
+    );
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
+    const dispatcher = new AgentCodeSynthesisDispatcher(router, new FakeFileWriterPort());
+
+    await dispatcher.synthesize('2A', WORKTREE, [{ path: 'src/foo.ts', kind: 'NEW' }]);
+
+    expect(adapterA.calls[0]?.prompt).toBe(
+      'You are Branch 2A of the Coding DAG. Write the full contents of exactly these files:\n' +
+        '- [NEW] src/foo.ts\n' +
+        'Do not use any tools — just generate the content as text.\n' +
+        'Respond with ONLY a single JSON object, no markdown fences and no commentary, of this exact shape:\n' +
+        '{"files":[{"path":"<repo-relative path>","content":"<full file contents>"}]}',
+    );
+  });
+
+  it('includes the task description in the prompt when provided (ORQ-47)', async () => {
+    const adapterA = new FakeAgentAdapter(
+      'claude_code',
+      jsonOutput('{"files":[{"path":"src/foo.ts","content":"x"}]}'),
+    );
+    const router = new AgentRouter([adapterA], ROUTING, new FakeClock());
+    const dispatcher = new AgentCodeSynthesisDispatcher(
+      router,
+      new FakeFileWriterPort(),
+      'add a retry flag',
+    );
+
+    await dispatcher.synthesize('2A', WORKTREE, [{ path: 'src/foo.ts', kind: 'NEW' }]);
+
+    expect(adapterA.calls[0]?.prompt).toContain('for task: add a retry flag');
+  });
+
   it('propagates a malformed response as MalformedSynthesisOutputError', async () => {
     const adapterA = new FakeAgentAdapter('claude_code', jsonOutput('not json'));
     const router = new AgentRouter([adapterA], ROUTING, new FakeClock());

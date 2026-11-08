@@ -69,6 +69,7 @@ describe('runCli', () => {
     expect(result.stdout).toContain('approvals');
     expect(result.stdout).toContain('plan');
     expect(result.stdout).toContain('code');
+    expect(result.stdout).toContain('implement');
     expect(result.stdout).toContain('auth');
     expect(result.stdout).toContain('queue');
   });

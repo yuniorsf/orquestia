@@ -37,9 +37,9 @@ function branchRoleDescription(branch: SpecialistBranch): string {
 const WIRING_INSTRUCTION =
   'If this task introduces a new unit that must be reachable at runtime (e.g. a new command, handler, route, or export), include every existing file that must change to register or wire it in as its own MODIFY entry in your manifest — a new unit nothing ever calls does not satisfy the task.';
 
-function buildPrompt(branch: SpecialistBranch, taskId: string): string {
+function buildPrompt(branch: SpecialistBranch, taskDescription: string): string {
   return [
-    `You are Branch ${branch} of the read-only Planning DAG for task "${taskId}".`,
+    `You are Branch ${branch} of the read-only Planning DAG for task "${taskDescription}".`,
     `Analyze the current repository and propose the ${branchRoleDescription(branch)} this task requires.`,
     ...(branch === '2A' ? [WIRING_INSTRUCTION] : []),
     'Do not write or modify any files — this is read-only analysis.',
@@ -49,9 +49,12 @@ function buildPrompt(branch: SpecialistBranch, taskId: string): string {
 }
 
 /** Always targets Branch 2B — matches `orquestia.config.yaml`'s own `planning_dag.gates.gate_1.remediate_with: 'branch_2b'` convention for a disjoint-ownership finding. */
-function buildManifestConflictPrompt(taskId: string, overlappingPaths: readonly string[]): string {
+function buildManifestConflictPrompt(
+  taskDescription: string,
+  overlappingPaths: readonly string[],
+): string {
   return [
-    `You are Branch 2B of the read-only Planning DAG for task "${taskId}".`,
+    `You are Branch 2B of the read-only Planning DAG for task "${taskDescription}".`,
     `Your previous proposal included these paths, which Branch 2A has already claimed as its own — remove every one of them from your revised manifest: ${overlappingPaths.join(', ')}.`,
     `Propose a revised ${branchRoleDescription('2B')} that does not include any of those paths.`,
     'Do not write or modify any files — this is read-only analysis.',
@@ -104,20 +107,31 @@ function parseSpecialistOutput(branch: SpecialistBranch, stdout: string): Specia
  * CLI (Claude Code / Copilot) via the existing `AgentRouter` (ORQ-24),
  * instructing it through the prompt to respond with exactly the JSON
  * shape of a {@link SpecialistOutput}.
+ *
+ * `taskId` names the worktree/branch (must stay git-safe); `taskDescription`
+ * is what actually reaches the dispatched agents' prompts, and defaults to
+ * `taskId` itself (ORQ-47) — `orquestia plan`/`orquestia code` never pass it
+ * explicitly, so their behavior is unchanged. `orquestia implement` passes a
+ * free-text description distinct from its git-safe `taskId`.
  */
 export class AgentSpecialistDispatcher
   implements SpecialistDispatcherPort, ManifestConflictRemediationDispatcherPort
 {
+  private readonly taskDescription: string;
+
   constructor(
     private readonly agentRouter: AgentRouter,
     private readonly cwd: string,
     private readonly taskId: string,
-  ) {}
+    taskDescription?: string,
+  ) {
+    this.taskDescription = taskDescription ?? taskId;
+  }
 
   async dispatch(branch: SpecialistBranch): Promise<SpecialistOutput> {
     const result = await this.agentRouter.dispatch(branch, {
       cwd: this.cwd,
-      prompt: buildPrompt(branch, this.taskId),
+      prompt: buildPrompt(branch, this.taskDescription),
     });
     return parseSpecialistOutput(branch, result.stdout);
   }
@@ -125,7 +139,7 @@ export class AgentSpecialistDispatcher
   async remediate(overlappingPaths: readonly string[]): Promise<SpecialistOutput> {
     const result = await this.agentRouter.dispatch('2B', {
       cwd: this.cwd,
-      prompt: buildManifestConflictPrompt(this.taskId, overlappingPaths),
+      prompt: buildManifestConflictPrompt(this.taskDescription, overlappingPaths),
     });
     return parseSpecialistOutput('2B', result.stdout);
   }

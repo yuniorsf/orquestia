@@ -79,3 +79,30 @@ export function buildCodeCommandDependencies(
     maxSelfHealRetries: 3,
   };
 }
+
+/**
+ * `orquestia implement <taskId> "<prompt>"` (ORQ-47) reuses the entire
+ * Coding DAG pipeline `buildCodeCommandDependencies` already wires —
+ * worktree provisioning, checkpoints, self-healing, rebase-and-reverify,
+ * ship — with exactly one difference: the three factories that dispatch
+ * agents carry `taskDescription` (the free-text prompt) alongside
+ * `taskId` (still required, git-safe, names the worktree/branch), so the
+ * dispatched agents see what the task actually is instead of just its
+ * slug.
+ */
+export function buildDescribedCodeCommandDependencies(
+  cwd: string,
+  agentRouter: AgentRouter,
+  taskDescription: string,
+): CodeCommandDependencies {
+  const base = buildCodeCommandDependencies(cwd, agentRouter);
+  return {
+    ...base,
+    planDispatcherFactory: (taskId) =>
+      new AgentSpecialistDispatcher(agentRouter, cwd, taskId, taskDescription),
+    manifestConflictRemediationDispatcherFactory: (taskId) =>
+      new AgentSpecialistDispatcher(agentRouter, cwd, taskId, taskDescription),
+    codeSynthesisDispatcherFactory: () =>
+      new AgentCodeSynthesisDispatcher(agentRouter, new FsFileWriter(), taskDescription),
+  };
+}

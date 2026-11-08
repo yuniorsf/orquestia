@@ -34,6 +34,8 @@ import { CommandRouter } from './command-router.js';
 import { parseConfigSelector, resolveConfigPath } from './config-profile.js';
 import { ConsoleTraceSink, type VerbosityLevel } from './console-trace-sink.js';
 import { ChildProcessDaemonLauncher } from './daemon-process-launcher.js';
+import { ImplementCommand } from './implement-command.js';
+import { buildImplementCommandDependencies } from './implement-command-wiring.js';
 import { PlanCommand } from './plan-command.js';
 import { buildPlanDispatcherFactory } from './plan-command-wiring.js';
 import { QueueCommand } from './queue-command.js';
@@ -153,6 +155,9 @@ export async function buildRouter(
     buildPlanDispatcherFactory(cwd, agentRouter),
   );
   const codeCommand = new CodeCommand(buildCodeCommandDependencies(cwd, agentRouter));
+  const implementCommand = new ImplementCommand(
+    buildImplementCommandDependencies(cwd, agentRouter),
+  );
 
   // SQLCipher (local, embedded, zero external infra via Node's built-in
   // node:sqlite) is the default vault backend; HashiCorpVaultProvider is
@@ -184,6 +189,7 @@ export async function buildRouter(
     new ApprovalsCommand(manager),
     planCommand,
     codeCommand,
+    implementCommand,
     authCommand,
     queueCommand,
   ]);
