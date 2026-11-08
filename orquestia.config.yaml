@@ -105,16 +105,16 @@ layers:
     strategy: 'quota_aware'
     primary_fallback: true
     providers:
-      - name: 'antigravity_orchestrator'
-        provider: 'antigravity'
-        base_url: 'cli://google-antigravity' # sentinel: DAG orchestrator, not an HTTP completion API
-        model: 'antigravity-default' # TODO: replace with Antigravity's real model/workflow id if it exposes one
-        priority: 1
       - name: 'claude_code_deep_reasoning'
         provider: 'claude_code'
         base_url: 'cli://claude-code' # sentinel: dispatched via CLI, not HTTP
         model: 'claude-opus-5-5'
-        priority: 2
+        priority: 1
+      - name: 'antigravity_orchestrator'
+        provider: 'antigravity'
+        base_url: 'cli://google-antigravity' # sentinel: DAG orchestrator, not an HTTP completion API
+        model: 'antigravity-default' # TODO: replace with Antigravity's real model/workflow id if it exposes one
+        priority: 2 # swapped behind claude_code_deep_reasoning while Antigravity's AI credits are exhausted
 
   # Layer 2: Scaffolding, Contracts & Test Suites (Phase 2B)
   coding_scaffolding_tests:
