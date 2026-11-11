@@ -29,6 +29,7 @@ if [[ ! -d "${TARGET_DIR}" ]]; then
 fi
 
 cd "${TARGET_DIR}" || exit 2
+TARGET_DIR="$(pwd)"
 
 HARNESS_ENV=".harness/harness.env"
 if [[ ! -f "${HARNESS_ENV}" ]] && [[ -f "${DEFAULT_ROOT}/.harness/harness.env" ]]; then
